@@ -1,0 +1,41 @@
+// app/layering/page.tsx
+// Server component — fetches fragrances + layering_protocols, passes to client.
+
+import { createClient } from '@supabase/supabase-js'
+import LayeringClient, { type LayeringFragrance, type LayeringProtocol } from './LayeringClient'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export const dynamic = 'force-dynamic'
+
+export default async function LayeringPage() {
+  const [fragrancesResult, protocolsResult] = await Promise.all([
+    supabase
+      .from('fragrances')
+      .select('id, brand, name, phase, phase_label, family, application_zone, anosmia_risk, rating')
+      .order('brand', { ascending: true }),
+    supabase
+      .from('layering_protocols')
+      .select('*')
+      .order('name', { ascending: true }),
+  ])
+
+  if (fragrancesResult.error || protocolsResult.error) {
+    const msg = fragrancesResult.error?.message ?? protocolsResult.error?.message
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <p className="text-red-400">Failed to load layering data: {msg}</p>
+      </div>
+    )
+  }
+
+  return (
+    <LayeringClient
+      fragrances={(fragrancesResult.data ?? []) as LayeringFragrance[]}
+      protocols={(protocolsResult.data ?? []) as LayeringProtocol[]}
+    />
+  )
+}
