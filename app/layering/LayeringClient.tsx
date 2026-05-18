@@ -12,6 +12,7 @@ export type LayeringFragrance = {
   application_zone: string
   anosmia_risk: 'High' | 'Medium' | 'Low'
   rating: number | null
+  image_url: string | null
 }
 
 export type LayeringProtocol = {
@@ -64,7 +65,6 @@ function FragrancePickerCard({
   selected: boolean
   onClick: () => void
 }) {
-  const pc = PHASE_CONFIG[f.phase]
   return (
     <button
       onClick={onClick}
@@ -75,6 +75,14 @@ function FragrancePickerCard({
       }`}
     >
       <div className="flex items-start justify-between gap-2">
+        {f.image_url && (
+          <img
+            src={f.image_url}
+            alt={f.name}
+            className="w-8 h-8 object-contain flex-shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        )}
         <div className="flex-1 min-w-0">
           <p className="text-xs text-slate-400 truncate">{f.brand}</p>
           <p className="text-white text-sm font-medium truncate">{f.name}</p>

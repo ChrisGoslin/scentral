@@ -15,7 +15,7 @@ export default async function LayeringPage() {
   const [fragrancesResult, protocolsResult] = await Promise.all([
     supabase
       .from('fragrances')
-      .select('id, brand, name, phase, phase_label, family, application_zone, anosmia_risk, rating')
+      .select('id, brand, name, phase, phase_label, family, application_zone, anosmia_risk, rating, image_url')
       .order('brand', { ascending: true }),
     supabase
       .from('layering_protocols')

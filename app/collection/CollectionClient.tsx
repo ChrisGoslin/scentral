@@ -190,6 +190,19 @@ function FragranceCard({
       className={`rounded-xl border ${phaseConfig.border} ${phaseConfig.bg} p-4 flex flex-col gap-2 hover:brightness-110 transition-all cursor-pointer`}
       onClick={onClick}
     >
+      {/* Bottle image */}
+      {f.image_url && (
+        <div className="flex justify-center mb-3">
+          <img
+            src={f.image_url}
+            alt={`${f.brand} ${f.name}`}
+            className="h-24 w-auto object-contain drop-shadow-lg"
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        </div>
+      )}
+
       {/* Header row */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
