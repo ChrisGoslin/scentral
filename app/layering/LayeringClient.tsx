@@ -56,6 +56,18 @@ function AnomsiaBadge({ risk }: { risk: 'High' | 'Medium' | 'Low' }) {
   return <span className={`text-xs px-2 py-0.5 rounded font-medium ${cls}`}>ARR {risk}</span>
 }
 
+function BottleImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      className="w-8 h-8 object-contain flex-shrink-0"
+      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+    />
+  )
+}
+
 function FragrancePickerCard({
   f,
   selected,
@@ -75,14 +87,7 @@ function FragrancePickerCard({
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        {f.image_url && (
-          <img
-            src={f.image_url}
-            alt={f.name}
-            className="w-8 h-8 object-contain flex-shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
-        )}
+        {f.image_url && <BottleImage src={f.image_url} alt={f.name} />}
         <div className="flex-1 min-w-0">
           <p className="text-xs text-slate-400 truncate">{f.brand}</p>
           <p className="text-white text-sm font-medium truncate">{f.name}</p>

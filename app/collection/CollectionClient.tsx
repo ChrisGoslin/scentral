@@ -193,6 +193,7 @@ function FragranceCard({
       {/* Bottle image */}
       {f.image_url && (
         <div className="flex justify-center mb-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={f.image_url}
             alt={`${f.brand} ${f.name}`}
