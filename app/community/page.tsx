@@ -122,9 +122,14 @@ export default function GlobalSillagePage() {
             <p className="text-slate-400 text-sm mb-4">{hoveredNode.brand}</p>
             
             <div className="flex gap-3">
-              <button className="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-900 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition">
+              <a 
+                href={`https://www.notino.ie/search/?text=${encodeURIComponent(hoveredNode.brand + ' ' + hoveredNode.name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-900 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition text-center"
+              >
                 Extract Decant
-              </button>
+              </a>
               <button className="px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition border border-slate-600">
                 + Wardrobe
               </button>

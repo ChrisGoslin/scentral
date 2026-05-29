@@ -51,10 +51,16 @@ export default function Home() {
               <div className="relative z-10 text-sm font-bold uppercase tracking-widest text-slate-300 group-hover:text-amber-50">Layering Lab</div>
             </Link>
 
-            <Link href="/dna-match" className="group relative overflow-hidden rounded-2xl bg-slate-900/50 border border-slate-800 px-6 py-4 transition transform hover:-translate-y-1 shadow-sm hover:border-amber-400/30 backdrop-blur-xl">
+            <button 
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate([10, 30, 10]);
+                alert("Broadcast Active: Your aura is now radiating to the Global Sillage.");
+              }}
+              className="group relative overflow-hidden rounded-2xl bg-slate-900/50 border border-slate-800 px-6 py-4 transition transform hover:-translate-y-1 shadow-sm hover:border-sky-400/30 backdrop-blur-xl text-left"
+            >
               <span className="absolute left-0 top-0 h-full w-1 bg-sky-400 transform -translate-x-6 group-hover:translate-x-0 transition"></span>
-              <div className="relative z-10 text-sm font-bold uppercase tracking-widest text-slate-300 group-hover:text-amber-50">Resonance Match</div>
-            </Link>
+              <div className="relative z-10 text-sm font-bold uppercase tracking-widest text-slate-300 group-hover:text-amber-50">The Pulse</div>
+            </button>
           </div>
         </section>
 
