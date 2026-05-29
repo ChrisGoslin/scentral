@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import LayeringResult from './LayeringResult'
+import SupabaseAuth from '../components/SupabaseAuth'
 
 export type LayeringFragrance = {
   id: string
@@ -13,6 +15,7 @@ export type LayeringFragrance = {
   anosmia_risk: 'High' | 'Medium' | 'Low'
   rating: number | null
   image_url: string | null
+  application_method?: string | null
 }
 
 export type LayeringProtocol = {
@@ -133,13 +136,11 @@ function ProtocolCard({
         highlighted ? 'border-amber-400 ring-2 ring-amber-400' : 'border-slate-700'
       }`}
     >
-      {/* Name + concept */}
       <div>
         <h3 className="text-white font-bold text-base">{protocol.name}</h3>
         <p className="text-slate-400 text-sm mt-0.5">{protocol.concept}</p>
       </div>
 
-      {/* Base + Top */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-slate-800/60 rounded-lg p-2.5">
           <p className="text-slate-500 text-xs mb-1">Base (apply first)</p>
@@ -153,7 +154,6 @@ function ProtocolCard({
         </div>
       </div>
 
-      {/* Stats row */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
         <span className="text-slate-400">
           <span className="text-slate-500">Sillage: </span>
@@ -173,14 +173,12 @@ function ProtocolCard({
         </span>
       </div>
 
-      {/* Anosmia warning */}
       {protocol.anosmia_warning && (
         <div className="bg-red-950/40 border border-red-800/40 rounded-lg px-3 py-2">
           <p className="text-red-300 text-xs">⚠ {protocol.anosmia_warning}</p>
         </div>
       )}
 
-      {/* Application note */}
       {protocol.application_note && (
         <p className="text-slate-400 text-xs italic">{protocol.application_note}</p>
       )}
@@ -196,9 +194,16 @@ export default function LayeringClient({
   protocols: LayeringProtocol[]
 }) {
   const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null)
+  const [selectedTopId, setSelectedTopId] = useState<string | null>(null)
+  const [result, setResult] = useState<any | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [timeOfDay, setTimeOfDay] = useState('Anytime')
+  const [weather, setWeather] = useState('Moderate Temp')
+  const [occasion, setOccasion] = useState('General Wear')
 
-  const selected = fragrances.find(f => f.id === selectedId) ?? null
+  const selectedBase = fragrances.find(f => f.id === selectedBaseId) ?? null
+  const selectedTop = fragrances.find(f => f.id === selectedTopId) ?? null
 
   const displayList = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -210,36 +215,69 @@ export default function LayeringClient({
     )
   }, [fragrances, query])
 
-  // Phase-compatible pairings: if Phase 1 selected → show Phase 2 + Phase 3, etc.
   const pairings = useMemo(() => {
-    if (!selected) return []
-    return fragrances.filter(f => f.id !== selected.id && f.phase !== selected.phase)
-  }, [fragrances, selected])
+    const sel = selectedBase ?? selectedTop
+    if (!sel) return []
+    return fragrances.filter(f => f.id !== sel.id && f.phase !== sel.phase)
+  }, [fragrances, selectedBase, selectedTop])
 
-  // Highlight protocols where the selected fragrance name appears as base or top
   const isHighlighted = (p: LayeringProtocol) => {
-    if (!selected) return false
-    const n = selected.name.toLowerCase()
-    return (
-      p.base_fragrance_name.toLowerCase().includes(n) ||
-      p.top_fragrance_name.toLowerCase().includes(n)
-    )
+    const namesToCheck = [selectedBase?.name?.toLowerCase(), selectedTop?.name?.toLowerCase()].filter(Boolean)
+    if (namesToCheck.length === 0) return false
+    return namesToCheck.some(n => p.base_fragrance_name.toLowerCase().includes(n!) || p.top_fragrance_name.toLowerCase().includes(n!))
+  }
+
+  async function handleFormulate() {
+    if (!selectedBase || !selectedTop) return
+    setLoading(true)
+    setResult(null)
+
+    const payload = {
+      brand_1: selectedBase.brand,
+      name_1: selectedBase.name,
+      phase_1: String(selectedBase.phase),
+      family_1: selectedBase.family,
+      application_zone_1: selectedBase.application_zone,
+      application_method_1: selectedBase.application_method ?? 'Standard Spray',
+      anosmia_risk_1: selectedBase.anosmia_risk,
+      brand_2: selectedTop.brand,
+      name_2: selectedTop.name,
+      phase_2: String(selectedTop.phase),
+      family_2: selectedTop.family,
+      application_zone_2: selectedTop.application_zone,
+      application_method_2: selectedTop.application_method ?? 'Standard Spray',
+      anosmia_risk_2: selectedTop.anosmia_risk,
+      time_of_day: timeOfDay,
+      weather,
+      occasion,
+    }
+
+    try {
+      const res = await fetch('/api/formulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const json = await res.json()
+      setResult(json)
+    } catch (e) {
+      setResult({ error: 'Failed to call formulate API' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* Header */}
       <div className="border-b border-slate-800 px-6 py-5">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-bold tracking-tight">Layering Lab</h1>
-          <p className="text-slate-400 text-sm mt-0.5">
-            Select a fragrance to discover compatible pairings and expert protocols.
-          </p>
+          <p className="text-slate-400 text-sm mt-0.5">Select two fragrances to formulate a combination and view expert guidance.</p>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-10">
-        {/* Search + picker */}
         <section>
           <h2 className="text-base font-semibold text-slate-200 mb-3">Your Collection</h2>
 
@@ -259,26 +297,66 @@ export default function LayeringClient({
                 <FragrancePickerCard
                   key={f.id}
                   f={f}
-                  selected={f.id === selectedId}
-                  onClick={() => setSelectedId(prev => (prev === f.id ? null : f.id))}
+                  selected={f.id === selectedBaseId || f.id === selectedTopId}
+                  onClick={() => {
+                    if (!selectedBaseId) return setSelectedBaseId(f.id)
+                    if (selectedBaseId && selectedBaseId !== f.id && !selectedTopId) return setSelectedTopId(f.id)
+                    if (selectedBaseId === f.id) return setSelectedBaseId(null)
+                    if (selectedTopId === f.id) return setSelectedTopId(null)
+                    setSelectedTopId(f.id)
+                  }}
                 />
               ))}
             </div>
           )}
         </section>
 
-        {/* Phase-compatible pairings */}
-        {selected ? (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <label className="text-slate-400 text-xs">Time of day</label>
+              <select value={timeOfDay} onChange={e => setTimeOfDay(e.target.value)} className="ml-2 bg-slate-800 border border-slate-700 text-white text-sm rounded-md px-2 py-1">
+                {['Anytime','Morning','Afternoon','Evening','Night'].map(o => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-slate-400 text-xs">Weather</label>
+              <select value={weather} onChange={e => setWeather(e.target.value)} className="ml-2 bg-slate-800 border border-slate-700 text-white text-sm rounded-md px-2 py-1">
+                {['Moderate Temp','Warm','Cold','Humid','Dry'].map(o => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-slate-400 text-xs">Occasion</label>
+              <select value={occasion} onChange={e => setOccasion(e.target.value)} className="ml-2 bg-slate-800 border border-slate-700 text-white text-sm rounded-md px-2 py-1">
+                {['General Wear','Date Night','Office','Gym','Formal'].map(o => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {selectedBase || selectedTop ? (
+            <section>
+              <h2 className="text-base font-semibold text-slate-200 mb-1">Selected Pair</h2>
+              <p className="text-slate-500 text-sm mb-3">
+                Base: <span className="text-white font-medium">{selectedBase?.name ?? '—'}</span> · Top: <span className="text-white font-medium">{selectedTop?.name ?? '—'}</span>
+              </p>
+              <div className="flex gap-2">
+                <button onClick={handleFormulate} disabled={!selectedBase || !selectedTop || loading} className="rounded-lg bg-amber-500 px-4 py-2 font-medium text-black disabled:opacity-50">
+                  {loading ? 'Formulating…' : 'Formulate'}
+                </button>
+                <button onClick={() => { setSelectedBaseId(null); setSelectedTopId(null); setResult(null); }} className="rounded-lg border border-slate-700 px-4 py-2 text-sm">Clear</button>
+              </div>
+            </section>
+          ) : (
+            <p className="text-slate-600 text-sm italic">Select two fragrances above to compare and formulate a combo.</p>
+          )}
+        </div>
+
+        {selectedBase ? (
           <section>
-            <h2 className="text-base font-semibold text-slate-200 mb-1">
-              Phase-Compatible Pairings
-            </h2>
-            <p className="text-slate-500 text-sm mb-3">
-              You selected <span className="text-white font-medium">{selected.name}</span> (Phase {selected.phase}).
-              Showing Phase {selected.phase === 1 ? '2 & 3' : selected.phase === 2 ? '1 & 3' : '1 & 2'} fragrances.
-            </p>
+            <h2 className="text-base font-semibold text-slate-200 mb-1">Phase-Compatible Pairings</h2>
+            <p className="text-slate-500 text-sm mb-3">Showing fragrances compatible with your selection.</p>
             {pairings.length === 0 ? (
-              <p className="text-slate-600 text-sm italic">No other fragrances in collection.</p>
+              <p className="text-slate-600 text-sm italic">No pairings found.</p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {pairings.map(f => (
@@ -287,20 +365,10 @@ export default function LayeringClient({
               </div>
             )}
           </section>
-        ) : (
-          <p className="text-slate-600 text-sm italic">
-            Select a fragrance above to see compatible pairings.
-          </p>
-        )}
+        ) : null}
 
-        {/* Expert protocols */}
         <section>
           <h2 className="text-base font-semibold text-slate-200 mb-1">Expert Protocols</h2>
-          {selected && (
-            <p className="text-slate-500 text-sm mb-3">
-              Protocols featuring <span className="text-amber-400 font-medium">{selected.name}</span> are highlighted.
-            </p>
-          )}
           {protocols.length === 0 ? (
             <p className="text-slate-600 text-sm italic">No protocols found.</p>
           ) : (
@@ -313,14 +381,30 @@ export default function LayeringClient({
         </section>
       </div>
 
-      {/* Footer */}
       <div className="border-t border-slate-800 px-6 py-4 text-center text-xs text-slate-600 space-y-1">
         <p>Scentral · Personal Fragrance Intelligence</p>
         <p>
-          <a href="/disclaimer" className="text-slate-500 text-xs hover:text-slate-300 underline">
-            For personal use only · Not medical advice · Always patch test · View full disclaimer
-          </a>
+          <a href="/disclaimer" className="text-slate-500 text-xs hover:text-slate-300 underline">For personal use only · Not medical advice · Always patch test · View full disclaimer</a>
         </p>
+      </div>
+
+      {result && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setResult(null)} />
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg bg-slate-900 border border-slate-700 p-6">
+            <button onClick={() => setResult(null)} className="absolute right-3 top-3 text-slate-400">✕</button>
+            <LayeringResult
+              result={result}
+              base={selectedBase}
+              top={selectedTop}
+              onSaveSuccess={() => { /* noop for now */ }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="fixed bottom-20 right-4 z-40">
+        <SupabaseAuth />
       </div>
     </div>
   )

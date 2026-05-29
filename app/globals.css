@@ -24,3 +24,64 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Small animations used by the landing hero */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+.animate-float { animation: float 6s ease-in-out infinite; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 420ms ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float, .fade-up { animation: none !important; }
+}
+
+/* Focus styles for interactive elements */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(245, 183, 106, 0.18);
+  border-radius: 9999px;
+}
+
+/* Scent bloom overlay styles */
+.scent-bloom {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --tilt-x: 0px;
+  --tilt-y: 0px;
+  transform-style: preserve-3d;
+}
+.scent-bloom > img {
+  transform: perspective(800px) translateZ(0) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transition: transform 300ms cubic-bezier(.2,.9,.2,1);
+}
+.scent-bloom-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(600px 600px at var(--pointer-x) var(--pointer-y), rgba(245,183,106,0.12), rgba(255,255,255,0.02) 30%, transparent 40%), radial-gradient(420px 420px at calc(var(--pointer-x) - 40px) calc(var(--pointer-y) - 20px), rgba(250,200,200,0.06), transparent 30%);
+  mix-blend-mode: screen;
+  filter: blur(18px) saturate(120%);
+  transition: background-position 160ms linear, opacity 220ms ease;
+  border-radius: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scent-bloom > img { transition: none; }
+  .scent-bloom-overlay { transition: none; }
+}
+
+/* Audio toggle styles */
+.audio-toggle {
+  backdrop-filter: blur(6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audio-toggle { transition: none; }
+}
