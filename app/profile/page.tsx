@@ -32,10 +32,10 @@ export default function ProfilePage() {
         data.forEach(f => {
           const str = `${f.primary_vector} ${f.notes}`.toLowerCase();
           
-          if (str.match(/wood|oud|cedar|sandalwood|amber|leather|vetiver|patchouli/)) woody += 1;
-          if (str.match(/rose|jasmine|iris|floral|violet|tuberose|blossom/)) floral += 1;
-          if (str.match(/citrus|bergamot|aquatic|marine|apple|fresh|lemon|grapefruit|mint/)) fresh += 1;
-          if (str.match(/spice|pepper|cardamom|cinnamon|vanilla|coffee|praline|caramel/)) spicy += 1;
+          if (str.match(/wood|oud|cedar|sandalwood|amber|leather|vetiver|patchouli|oakmoss|musk|animalic|smoke|tobacco/)) woody += 1;
+          if (str.match(/rose|jasmine|iris|floral|violet|tuberose|blossom|geranium|neroli|ylang|gardenia|peony/)) floral += 1;
+          if (str.match(/citrus|bergamot|aquatic|marine|apple|fresh|lemon|grapefruit|mint|ozonic|cucumber|tea|green/)) fresh += 1;
+          if (str.match(/spice|pepper|cardamom|cinnamon|vanilla|coffee|praline|caramel|clove|nutmeg|saffron|gourmand/)) spicy += 1;
         });
 
         const total = woody + floral + fresh + spicy;

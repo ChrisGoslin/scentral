@@ -97,13 +97,32 @@ export default function PredictiveEngine() {
   }
 
   async function submitReflection() {
+    if (!protocol) return;
     setSavingReflection(true);
-    // Simulate API call to save reflection
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setSavingReflection(false);
-    setShowReflection(false);
-    setProtocol(null);
-    setIntent('');
+    
+    try {
+      const res = await fetch('/api/sommelier/reflect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          protocol_id: protocol.id || 'generated',
+          rating: reflection.rating,
+          compliments: reflection.compliments,
+          notes: reflection.notes
+        })
+      });
+
+      if (res.ok) {
+        setShowReflection(false);
+        setProtocol(null);
+        setIntent('');
+        alert("The Alchemist has recorded your wisdom. Future formulations will be more precise.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingReflection(false);
+    }
   }
 
   if (!mounted) return null;
