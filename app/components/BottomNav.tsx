@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation'
 
 const NAV_ITEMS = [
   {
-    label: 'Collection',
-    href: '/collection',
+    label: 'Wardrobe',
+    href: '/library',
     icon: (active: boolean) => (
       <svg className={`h-6 w-6 ${active ? 'text-amber-400' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 2 : 1.5} d="M19 11H5m14 0a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2m14 0V9a2 2 0 0 0-2-2M5 11V9a2 2 0 0 1 2-2m0 0V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2M7 7h10" />
@@ -14,8 +14,8 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: 'Lab',
-    href: '/layering',
+    label: 'Resonance',
+    href: '/dna-match',
     icon: (active: boolean) => (
       <svg className={`h-6 w-6 ${active ? 'text-amber-400' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 2 : 1.5} d="M19.428 15.428a2 2 0 0 0-1.022-.547l-2.387-.477a6 6 0 0 0-3.86.517l-.318.158a6 6 0 0 1-3.86.517L6.05 15.21a2 2 0 0 0-1.806.547M8 4h8l-1 1v5.172a2 2 0 0 0 .586 1.414l5 5C21.846 17.846 20.953 20 19.171 20H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 0 0 9 10.172V5L8 4z" />
@@ -23,8 +23,8 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: 'Schedule',
-    href: '/schedule',
+    label: 'Archives',
+    href: '/community',
     icon: (active: boolean) => (
       <svg className={`h-6 w-6 ${active ? 'text-amber-400' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 2 : 1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
@@ -32,8 +32,8 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: 'Profile',
-    href: '/profile',
+    label: 'Lexicon',
+    href: '/learning',
     icon: (active: boolean) => (
       <svg className={`h-6 w-6 ${active ? 'text-amber-400' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 2 : 1.5} d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z" />

@@ -29,9 +29,9 @@ const FRAGRANTICA_OVERRIDES = {
 async function searchFragrantica(brand, name) {
   const searchName = FRAGRANTICA_OVERRIDES[name] || name;
   const url = buildSearchUrl(brand, searchName);
-
+  
   console.log(`  Searching: ${brand} - ${searchName}`);
-
+  
   try {
     const res = await fetch(url, {
       headers: {
@@ -39,24 +39,24 @@ async function searchFragrantica(brand, name) {
         'Accept': 'text/html',
       },
     });
-
+    
     if (!res.ok) {
       console.log(`  ✗ Search failed (${res.status})`);
       return null;
     }
-
+    
     const html = await res.text();
     const $ = cheerio.load(html);
-
+    
     // Find first search result link
     const firstResult = $('a[href*="/perfume/"]').first();
     const href = firstResult.attr('href');
-
+    
     if (!href) {
       console.log(`  ✗ No results found`);
       return null;
     }
-
+    
     const fragranceUrl = href.startsWith('http') ? href : `https://www.fragrantica.com${href}`;
     console.log(`  Found page: ${fragranceUrl}`);
     return fragranceUrl;
@@ -74,16 +74,16 @@ async function extractImageUrl(fragrancePageUrl) {
         'Accept': 'text/html',
       },
     });
-
+    
     if (!res.ok) return null;
-
+    
     const html = await res.text();
     const $ = cheerio.load(html);
-
+    
     // Fragrantica bottle image is in the main perfume image div
     const img = $('div.fragrance-image img, img[itemprop="image"], .cell.text-center img').first();
     const src = img.attr('src');
-
+    
     if (!src) return null;
     const imageUrl = src.startsWith('http') ? src : `https://www.fragrantica.com${src}`;
     console.log(`  Image: ${imageUrl}`);
@@ -102,31 +102,31 @@ async function downloadAndUpload(imageUrl, filename) {
         'Referer': 'https://www.fragrantica.com',
       },
     });
-
+    
     if (!res.ok) {
       console.log(`  ✗ Download failed (${res.status})`);
       return null;
     }
-
+    
     const buffer = await res.arrayBuffer();
     const contentType = res.headers.get('content-type') || 'image/jpeg';
-
+    
     const { error } = await supabase.storage
       .from('fragrance-images')
       .upload(filename, buffer, {
         contentType,
         upsert: true,
       });
-
+    
     if (error) {
       console.log(`  ✗ Upload error: ${error.message}`);
       return null;
     }
-
+    
     const { data } = supabase.storage
       .from('fragrance-images')
       .getPublicUrl(filename);
-
+    
     return data.publicUrl;
   } catch (err) {
     console.log(`  ✗ Upload error: ${err.message}`);
@@ -158,31 +158,31 @@ async function main() {
   }
 
   console.log(`Found ${fragrances.length} fragrances with no image\n`);
-
+  
   const results = { success: 0, failed: 0, skipped: 0 };
 
   for (const fragrance of fragrances) {
     console.log(`\n[${fragrance.brand}] ${fragrance.name}`);
-
+    
     // 1. Search Fragrantica
     const pageUrl = await searchFragrantica(fragrance.brand, fragrance.name);
     if (!pageUrl) {
       results.failed++;
       continue;
     }
-
+    
     // Be polite — wait between requests
     await sleep(1500);
-
+    
     // 2. Extract image URL from page
     const imageUrl = await extractImageUrl(pageUrl);
     if (!imageUrl) {
       results.failed++;
       continue;
     }
-
+    
     await sleep(1000);
-
+    
     // 3. Download + upload to Supabase Storage
     const filename = `${fragrance.id}.jpg`;
     const publicUrl = await downloadAndUpload(imageUrl, filename);
@@ -190,13 +190,13 @@ async function main() {
       results.failed++;
       continue;
     }
-
+    
     // 4. Update image_url in DB
     const { error: updateError } = await supabase
       .from('fragrances')
       .update({ image_url: publicUrl })
       .eq('id', fragrance.id);
-
+    
     if (updateError) {
       console.log(`  ✗ DB update failed: ${updateError.message}`);
       results.failed++;
@@ -204,7 +204,7 @@ async function main() {
       console.log(`  ✓ Done: ${publicUrl}`);
       results.success++;
     }
-
+    
     // Polite delay between fragrances
     await sleep(2000);
   }

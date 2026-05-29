@@ -109,6 +109,7 @@ function PairingCard({ f }: { f: LayeringFragrance }) {
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 flex flex-col gap-1.5">
       <div className="flex items-start justify-between gap-2">
+        {f.image_url && <BottleImage src={f.image_url} alt={f.name} />}
         <div className="flex-1 min-w-0">
           <p className="text-xs text-slate-400 truncate">{f.brand}</p>
           <p className="text-white text-sm font-semibold truncate">{f.name}</p>

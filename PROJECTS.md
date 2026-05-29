@@ -1,58 +1,30 @@
-# Scentral — Project Status & Notes
+# Scentral Hub — The Council's Sovereign Roadmap (Pushed 50%)
 
-**Last updated:** 2026-05-28
-**Status:** Landing / marketing polish + demo flows
-
----
-
-## Overview
-
-Scentral is the fragrance discovery front-end and marketing surface. Recent work focused on a premium, minimal landing experience and a lightweight demo/save interaction to showcase product feel.
-
-## Recent changes (2026-05-28)
-
-- Landing hero redesign: two-column premium layout, refined typography, and decorative art (`app/page.tsx`, `public/images/landing-art.svg`).
-- Interactive demo save flow (`app/components/DemoSave.tsx`) posting to `/api/demo/save` (lightweight POST route).
-- Global micro-interactions and accessible focus/animation utilities in `app/globals.css`.
-- Shared toast system: `app/components/ToastProvider.tsx` (exported `ToastContext`) and `app/components/useToast.tsx` for in-app notifications.
-- Documentation and PR artifacts added: `docs/ux/scentral-landing-spec.md`, `docs/ux/scentral-landing-checklist.md`, `PR_DESCRIPTION.md` updated, `scripts/create-pr.sh` helper added.
-- Interactive scent-bloom enhancement: pointer-follow radial glow and subtle parallax tilt on the hero art (`app/components/ScentBloom.tsx`, `app/globals.css`) to increase tactile, premium feel.
-- Audio chord micro-interaction: optional WebAudio soft pad triggered by the bloom with a persistent toggle (`app/components/AudioChord.tsx`).
-
-## Impact
-
-- Improves first-impression conversion with a sensory, polished hero.
-- Adds a safe demo path for users to interact with the product and for developers to test feedback flows.
-- Provides a small, reusable toast pattern for UX feedback across components.
-
-## How to test locally
-
-1. Install and run the app:
-
-```bash
-cd scentral
-npm install
-npm run dev
-```
-
-1. Open [http://localhost:3000](http://localhost:3000) and verify:
-
-- Hero renders and layout is responsive
-- Decorative art appears on large screens
-- Click the demo "Save" CTA → network POST to `/api/demo/save` and a toast appears
-
-1. Run lint/type checks if configured:
-
-```bash
-npm run lint
-npm run build
-```
-
-## PR / branch guidance
-
-- Branch name suggestion: `scentral/landing-scent-bloom-plus-audio`
-- Commit message template: `scentral: landing hero redesign + demo save + optional audio chord`
-- Include these files for review: `app/page.tsx`, `app/components/DemoSave.tsx`, `app/components/ToastProvider.tsx`, `app/globals.css`, `docs/ux/scentral-landing-spec.md`, `docs/ux/scentral-landing-checklist.md`, `PR_DESCRIPTION.md`.
-- Reviewer checklist: run local dev, verify demo save + toast, check reduced-motion and keyboard focus behavior.
+## ⚖️ The Council's Mandate
+**Directive:** The Business Angel kept us solvent, but too conventional. We do not build "Web 2.0 Forums" or "Static Dashboards." We build an **Autonomous Sovereignty**. 
 
 ---
+
+## 🟢 PHASE 1: The Sovereign Identity (Retention & Telemetry)
+*Utility so advanced it feels like magic. No static data; everything breathes.*
+- [ ] **The Exhibition (formerly Visual Shelves):** Not just a drag-and-drop grid. A high-fidelity, curated "Gallery" where the Top 10 are enshrined. It must feel like walking into a luxury boutique. 
+- [ ] **The Dynamic Aura (formerly Fragrance Wheel):** A pie chart is a spreadsheet. We will build a WebGL-powered "Scent Aura" that visually pulses and evolves based on their collection's weight (Oud, Green, Aquatic).
+- [ ] **The Sommelier's Daily Ritual (Predictive Engine):** A hyper-personalized, 3-step daily retention loop driven by the Alchemist AI.
+  - **Morning Formulation:** User inputs a vibe or anchor scent (e.g., "I want to wear His Confession"). The Alchemist ingests local weather, time, and asks context ("Office? Date?").
+  - **The Blueprint:** Alchemist generates a Spritz Schedule (what to wear, what time, kinetic application zones) and auto-generates a creative name for the combo.
+  - **Evening Reflection:** User returns at night to log telemetry (rating, compliment factor, longevity), feeding the AI for smarter future recommendations.
+
+## 🟡 PHASE 2: Ambient Synchronization (The Anti-Network)
+*Kill the "Reddit-style" feed. Forums invite bloat and toxicity. We want Ambient Social.*
+- [ ] **The Global Sillage (formerly Community Feed):** A passive, real-time data visualization of what the Scentral network is wearing *right now*. No comments, no text posts. Just pure, aesthetic telemetry (e.g., "500 people in London are radiating Bergamot").
+- [ ] **Olfactory Resonance (DNA Matching):** Find your "Scent Twin" globally. If your WebGL Auras match >90%, a private, ephemeral connection opens to trade layering secrets.
+- [ ] **The Pulse:** Users can broadcast their "Spritz of the Day" with one tap. It temporarily alters their public avatar's aura.
+
+## 🟠 PHASE 3: Invisible Commerce (JIT Affiliates)
+*Do not build a separate "Shopping App." Commerce must be invisible and strictly Just-In-Time.*
+- [ ] **Zero-Click Acquisition:** When a user discovers a high-resonance scent in the Global Sillage, an affiliate link to buy a 2ml decant/sample appears natively within the UI interaction.
+- [ ] **The Arbitrage Engine:** A background cron job that scans Notino, Amazon, and discounters, alerting users *only* when a wishlist item drops below a historic price threshold.
+- [ ] **The Collector's Tier (Pro):** $4.99/mo to unlock unlimited timeline history, advanced weather forecasting, and early access to the Arbitrage Engine alerts.
+
+---
+**Current Focus:** STAY IN PHASE 1. We are building **The Exhibition** and the **Predictive Engine**.
