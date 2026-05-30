@@ -123,9 +123,12 @@ export default function DynamicAura({ dna, size = 300 }: { dna: ScentDNA; size?:
         />
         
         {/* Inner Physical Core */}
-        <div className="absolute inset-4 rounded-full bg-slate-950/40 backdrop-blur-md border border-white/5 flex items-center justify-center overflow-hidden z-10 shadow-inner">
-          <div className="text-center">
-            <span className="block text-4xl mb-2">{isPlaying ? '〰️' : '⊙'}</span>
+        <div className="absolute inset-4 rounded-full bg-slate-950/40 backdrop-blur-md border border-white/5 flex items-center justify-center overflow-hidden z-10 shadow-inner group">
+          {/* Film Grain Texture */}
+          <div className="absolute inset-0 opacity-[0.03] bg-[url('/assets/noise.svg')] pointer-events-none mix-blend-overlay" />
+
+          <div className="text-center relative z-20">
+            <span className="block text-4xl mb-2 transition-transform duration-700 group-hover:scale-110">{isPlaying ? '〰️' : '⊙'}</span>
             <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
               {isPlaying ? 'Resonating' : 'Awaken Aura'}
             </span>
@@ -134,16 +137,31 @@ export default function DynamicAura({ dna, size = 300 }: { dna: ScentDNA; size?:
           {/* Internal DNA strings */}
           <motion.div 
             className="absolute inset-0 border-[0.5px] border-white/10 rounded-full"
-            animate={{ rotate: isPlaying ? 360 : 0 }}
+            animate={{ 
+              rotate: isPlaying ? 360 : 0,
+              scale: isPlaying ? [1, 1.05, 1] : 1
+            }}
             transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
             style={{ borderRadius: '40% 60% 70% 30% / 40% 50% 60% 50%' }}
           />
           <motion.div 
             className="absolute inset-2 border-[0.5px] border-white/5 rounded-full"
-            animate={{ rotate: isPlaying ? -360 : 0 }}
+            animate={{ 
+              rotate: isPlaying ? -360 : 0,
+              opacity: isPlaying ? [0.2, 0.5, 0.2] : 0.2
+            }}
             transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
             style={{ borderRadius: '60% 40% 30% 70% / 50% 40% 50% 60%' }}
           />
+
+          {/* Micro-spark micro-animations */}
+          {isPlaying && (
+            <motion.div 
+              className="absolute inset-0 bg-white/5 blur-3xl rounded-full"
+              animate={{ scale: [1, 1.5, 1], opacity: [0.1, 0.3, 0.1] }}
+              transition={{ duration: 4, repeat: Infinity }}
+            />
+          )}
         </div>
       </motion.div>
 

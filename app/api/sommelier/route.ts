@@ -28,9 +28,23 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { intent, weather, wardrobe } = body;
 
+    // Reinforcement Learning: Fetch historical high-resonance logs
+    const { createClient } = await import('@/utils/supabase/server');
+    const supabase = await createClient();
+    const { data: pastSuccesses } = await supabase
+      .from('wear_logs')
+      .select('notes, rating, created_at')
+      .eq('rating', 5)
+      .limit(3);
+
+    const memoryBlock = pastSuccesses?.length 
+      ? `\nHistorical Memory (High Resonance): ${pastSuccesses.map(log => `[${log.created_at}] "${log.notes}"`).join(' | ')}`
+      : "";
+
     const userPrompt = `
       User Intent/Vibe: "${intent}"
       Local Weather: ${weather.temp}°C, ${weather.humidity}% Humidity, Condition: ${weather.condition}
+      ${memoryBlock}
       
       Available Wardrobe:
       ${wardrobe.map((f: any) => `- ${f.brand} ${f.name} (Family: ${f.primary_vector}) [Notes: ${f.notes}]`).join('\n')}
