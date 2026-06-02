@@ -7,12 +7,10 @@
 // Requires: ANTHROPIC_API_KEY in .env.local
 // Install: npm install @anthropic-ai/sdk
 
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
-import { createClient } from '@/utils/supabase/server';
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 // Globally persistent via Upstash Redis — shared across all serverless instances.
@@ -148,24 +146,22 @@ function parseJsonObject(text: string) {
 
 export async function POST(req: Request) {
   try {
-    // Auth guard — only signed-in users can call this paid AI endpoint
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Rate limit — globally enforced via Upstash Redis across all serverless instances
+    // Formulate is public — auth is only required at save time (see /api/layering/save).
+    // Rate limit authenticated users when Upstash is configured.
     if (ratelimit) {
-      const { success } = await ratelimit.limit(user.id);
-      if (!success) {
-        return NextResponse.json(
-          { error: 'Too many requests. Please wait a moment before formulating again.' },
-          { status: 429 }
-        );
+      const { cookies } = await import('next/headers');
+      const { createClient } = await import('@/utils/supabase/server');
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { success } = await ratelimit.limit(user.id);
+        if (!success) {
+          return NextResponse.json(
+            { error: 'Too many requests. Please wait a moment before formulating again.' },
+            { status: 429 }
+          );
+        }
       }
     }
 

@@ -1,52 +1,68 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
+
+type SaveRequest = {
+  base_fragrance_id: string;
+  top_fragrance_id: string;
+  name: string;
+  occasion: string;
+  time_of_day: string;
+  weather: string;
+  rationale: string;
+  formulation: Record<string, unknown>;
+  base_sprays: number | null;
+  top_sprays: number | null;
+};
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY
-
-  if (!SUPABASE_URL || !SERVICE_KEY) {
-    return NextResponse.json({ error: 'Supabase service key not configured. Set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY in environment.' }, { status: 501 })
-  }
-
-  const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
-
-  // Expect Authorization: Bearer <access_token>
-  const authHeader = req.headers.get('authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Authentication required. Provide Authorization: Bearer <access_token>' }, { status: 401 })
-  }
-  const token = authHeader.replace(/^Bearer\s+/i, '')
-
-  // Validate token and fetch user
   try {
-    // supabase.auth.getUser accepts an access token and returns the user
-    const { data: userData, error: userErr } = await supabase.auth.getUser(token)
-    if (userErr || !userData?.user) {
-      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 })
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = userData.user
+    const body: SaveRequest = await req.json();
+    const { base_fragrance_id, top_fragrance_id } = body;
 
-    const insertObj: any = {
-      base_fragrance_id: body.base_id ?? null,
-      top_fragrance_id: body.top_id ?? null,
-      combo_json: body.combo ?? null,
-      combo_names: body.combo_names ?? null,
-      created_by: user.email ?? user.id,
-      created_by_id: user.id,
-      created_at: new Date().toISOString(),
+    if (!base_fragrance_id || !top_fragrance_id) {
+      return NextResponse.json(
+        { error: 'base_fragrance_id and top_fragrance_id are required' },
+        { status: 400 }
+      );
     }
 
-    const { data, error } = await supabase.from('layering_combinations').insert([insertObj]).select().single()
+    const { data, error } = await supabase
+      .from('layering_combinations')
+      .insert({
+        user_id: user.id,
+        base_fragrance_id,
+        top_fragrance_id,
+        name: body.name ?? null,
+        occasion: body.occasion ?? null,
+        time_of_day: body.time_of_day ?? null,
+        weather: body.weather ?? null,
+        rationale: body.rationale ?? null,
+        formulation: body.formulation ?? null,
+        base_sprays: body.base_sprays ?? 1,
+        top_sprays: body.top_sprays ?? 1,
+        is_saved: true,
+        is_ai_suggested: true,
+      })
+      .select('id')
+      .single();
+
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('Save layering combination error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    return NextResponse.json({ ok: true, row: data })
-  } catch (e: any) {
-    return NextResponse.json({ error: String(e.message || e) }, { status: 500 })
+
+    return NextResponse.json({ success: true, id: data.id });
+  } catch (err) {
+    console.error('Save route error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

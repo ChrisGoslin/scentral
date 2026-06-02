@@ -1,13 +1,15 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
-import { Search, X, AlertTriangle } from 'lucide-react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import { Search, X, AlertTriangle, Check } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import Sheet from '@/components/ui/Sheet'
 import LoadingShimmer from '@/components/ui/LoadingShimmer'
 import ErrorInline from '@/components/ui/ErrorInline'
 import Disclosure from '@/components/ui/Disclosure'
+import AuthSheet from '@/components/auth/AuthSheet'
 
 export type LayeringFragrance = {
   id: string
@@ -34,6 +36,15 @@ export type FormulateResult = {
   claude_note: string
 }
 
+type PendingFormulation = {
+  slot1: LayeringFragrance
+  slot2: LayeringFragrance
+  occasion: string
+  result: FormulateResult
+}
+
+const PENDING_KEY = 'scentral_pending_formulation'
+
 const OCCASIONS = ['Anytime', 'Date', 'Office', 'Gym', 'Formal'] as const
 type Occasion = typeof OCCASIONS[number]
 
@@ -53,8 +64,7 @@ function parseSprayCount(steps: string[], fragName: string): number | null {
   const words = fragName.toLowerCase().split(' ').slice(0, 2)
   for (const step of steps) {
     const s = step.toLowerCase()
-    const nameMatch = words.some(w => s.includes(w))
-    if (nameMatch) {
+    if (words.some(w => s.includes(w))) {
       const m = s.match(/(\d+)\s*sprays?/)
       if (m) return parseInt(m[1], 10)
     }
@@ -70,7 +80,6 @@ function parseLasts(sillage: string): string | null {
   return null
 }
 
-/* ── Commerce flag ── HIDDEN in MVP */
 const SHOW_COMMERCE_SLOT = false
 
 /* ── Sub-components ─────────────────────────────────────── */
@@ -94,14 +103,10 @@ function PickerSlot({ label, fragrance, onClick }: { label: string; fragrance: L
         boxShadow: fragrance ? '0 0 12px rgba(201,162,75,0.1)' : undefined,
       }}
     >
-      <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-        {label}
-      </p>
+      <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</p>
       {fragrance ? (
         <>
-          <p style={{ fontSize: 14, fontFamily: 'var(--font-display)', color: 'var(--text)', lineHeight: '18px' }}>
-            {fragrance.name}
-          </p>
+          <p style={{ fontSize: 14, fontFamily: 'var(--font-display)', color: 'var(--text)', lineHeight: '18px' }}>{fragrance.name}</p>
           <PhaseTag phase={fragrance.phase} />
         </>
       ) : (
@@ -139,11 +144,15 @@ function ResultCard({
   slot1,
   slot2,
   onTryAnother,
+  onSave,
+  saveState,
 }: {
   result: FormulateResult
   slot1: LayeringFragrance | null
   slot2: LayeringFragrance | null
   onTryAnother: () => void
+  onSave: () => void
+  saveState: 'idle' | 'saving' | 'saved' | 'error'
 }) {
   const fragrances = [slot1, slot2].filter(Boolean) as LayeringFragrance[]
   const lasts = parseLasts(result.sillage_prediction)
@@ -156,7 +165,6 @@ function ResultCard({
 
   return (
     <div className="flex flex-col gap-5 py-4">
-      {/* Title */}
       <div>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', lineHeight: '28px' }}>
           Your formulation
@@ -199,20 +207,13 @@ function ResultCard({
 
       {/* Why */}
       <div>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-          Why
-        </p>
-        <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: '22px', fontStyle: 'italic' }}>
-          {result.claude_note}
-        </p>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Why</p>
+        <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: '22px', fontStyle: 'italic' }}>{result.claude_note}</p>
       </div>
 
-      {/* Reserved commerce slot — HIDDEN in MVP */}
+      {/* Commerce slot — HIDDEN in MVP */}
       {SHOW_COMMERCE_SLOT && (
-        /* Where to buy — post-MVP affiliate seam. Do not build in MVP. */
-        <div style={{ display: 'none' }} aria-hidden="true">
-          {/* Where to buy placeholder */}
-        </div>
+        <div style={{ display: 'none' }} aria-hidden="true">{/* Where to buy — post-MVP */}</div>
       )}
 
       {/* Anosmia warning */}
@@ -223,13 +224,20 @@ function ResultCard({
         </div>
       )}
 
-      {/* Save + Try another */}
-      <Button fullWidth>Save formulation</Button>
-      <Button variant="secondary" fullWidth onClick={onTryAnother}>
-        Try another
-      </Button>
+      {/* Save button */}
+      {saveState === 'saved' ? (
+        <div className="flex items-center justify-center gap-2 rounded-[var(--r-btn)] py-3" style={{ background: 'var(--surface-2)', border: '1px solid var(--positive)' }}>
+          <Check size={16} strokeWidth={1.75} style={{ color: 'var(--positive)' }} />
+          <span style={{ fontSize: 14, color: 'var(--positive)' }}>Saved</span>
+        </div>
+      ) : (
+        <Button fullWidth disabled={saveState === 'saving'} onClick={onSave}>
+          {saveState === 'saving' ? 'Saving…' : 'Save formulation'}
+        </Button>
+      )}
 
-      {/* Disclosure */}
+      <Button variant="secondary" fullWidth onClick={onTryAnother}>Try another</Button>
+
       <Disclosure text="Personal recommendation — not sponsored." />
     </div>
   )
@@ -247,9 +255,71 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<FormulateResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [authSheetOpen, setAuthSheetOpen] = useState(false)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   const canFormulate = slot1 !== null && slot2 !== null && slot1.id !== slot2.id
 
+  /* ── Pending formulation: restore + auto-save after magic-link return ── */
+  const doSave = useCallback(async (
+    s1: LayeringFragrance,
+    s2: LayeringFragrance,
+    occ: string,
+    r: FormulateResult
+  ) => {
+    setSaveState('saving')
+    const sprayBase = parseSprayCount(r.application_steps, s1.name)
+    const sprayTop = parseSprayCount(r.application_steps, s2.name)
+
+    try {
+      const res = await fetch('/api/layering/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          base_fragrance_id: s1.id,
+          top_fragrance_id: s2.id,
+          name: r.combo_name,
+          occasion: occ,
+          time_of_day: 'morning',
+          weather: 'moderate',
+          rationale: r.claude_note,
+          formulation: r,
+          base_sprays: sprayBase,
+          top_sprays: sprayTop,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Save failed')
+      setSaveState('saved')
+    } catch {
+      setSaveState('error')
+    }
+  }, [])
+
+  useEffect(() => {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(PENDING_KEY) : null
+    if (!raw) return
+
+    let pending: PendingFormulation | null = null
+    try { pending = JSON.parse(raw) } catch { /* ignore */ }
+    if (!pending) return
+
+    localStorage.removeItem(PENDING_KEY)
+
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      const { slot1: s1, slot2: s2, occasion: occ, result: r } = pending!
+      setSlot1(s1)
+      setSlot2(s2)
+      setOccasion(occ as Occasion)
+      setResult(r)
+      setResultOpen(true)
+      doSave(s1, s2, occ, r)
+    })
+  }, [doSave])
+
+  /* ── Picker ── */
   const displayList = useMemo(() => {
     const q = pickerQuery.trim().toLowerCase()
     if (!q) return fragrances
@@ -275,13 +345,16 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
     setPickerQuery('')
     setResult(null)
     setError(null)
+    setSaveState('idle')
   }
 
+  /* ── Formulate ── */
   async function handleFormulate() {
     if (!slot1 || !slot2) return
     setIsLoading(true)
     setResult(null)
     setError(null)
+    setSaveState('idle')
     setResultOpen(true)
 
     try {
@@ -320,10 +393,31 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
     }
   }
 
+  /* ── Save ── */
+  async function handleSave() {
+    if (!slot1 || !slot2 || !result) return
+
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+      // Stash formulation in localStorage, then open auth sheet
+      const pending: PendingFormulation = {
+        slot1, slot2, occasion: OCCASION_API_MAP[occasion], result,
+      }
+      localStorage.setItem(PENDING_KEY, JSON.stringify(pending))
+      setAuthSheetOpen(true)
+      return
+    }
+
+    await doSave(slot1, slot2, OCCASION_API_MAP[occasion], result)
+  }
+
   function handleTryAnother() {
     setResultOpen(false)
     setResult(null)
     setError(null)
+    setSaveState('idle')
   }
 
   return (
@@ -423,9 +517,22 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
             <Button variant="secondary" fullWidth onClick={handleTryAnother}>Try another</Button>
           </div>
         ) : result ? (
-          <ResultCard result={result} slot1={slot1} slot2={slot2} onTryAnother={handleTryAnother} />
+          <ResultCard
+            result={result}
+            slot1={slot1}
+            slot2={slot2}
+            onTryAnother={handleTryAnother}
+            onSave={handleSave}
+            saveState={saveState}
+          />
         ) : null}
       </Sheet>
+
+      {/* Auth sheet */}
+      <AuthSheet
+        open={authSheetOpen}
+        onClose={() => setAuthSheetOpen(false)}
+      />
     </div>
   )
 }
