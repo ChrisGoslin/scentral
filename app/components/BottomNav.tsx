@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 const NAV_ITEMS = [
   { label: 'Collection', href: '/collection' },
   { label: 'Lab',        href: '/layering'   },
+  { label: 'Schedule',   href: '/schedule'   },
   { label: 'You',        href: '/you'         },
 ]
 
@@ -22,7 +23,7 @@ export default function BottomNav() {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      <div className="mx-auto grid h-14 max-w-md items-center gap-1" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+      <div className="mx-auto grid h-14 max-w-md items-center gap-1" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         {NAV_ITEMS.map(item => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
           return (
