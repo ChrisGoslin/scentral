@@ -33,21 +33,29 @@ export default function DisclaimerPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Disclaimer &amp; Terms of Use</h1>
-        <p className="text-slate-400 text-base mb-10">
-          Scentral is a personal fragrance organisation tool — not a medical or clinical service.
-        </p>
+    <div className="min-h-screen bg-stone-50 text-stone-900">
+      <div className="max-w-3xl mx-auto px-6 py-16">
+        <header className="mb-16 border-b border-stone-200 pb-8">
+          <h1 className="editorial-title text-4xl mb-4">Disclaimer &amp; Terms</h1>
+          <p className="text-stone-500 text-sm uppercase tracking-[0.2em]">Safety and hobbyist boundaries</p>
+        </header>
 
-        <div className="space-y-8">
+        <div className="space-y-12">
           {sections.map(({ heading, body }) => (
-            <div key={heading}>
-              <h2 className="text-lg font-semibold text-white mb-2">{heading}</h2>
-              <p className="text-slate-400 text-sm leading-relaxed">{body}</p>
-            </div>
+            <section key={heading} className="luxury-card p-8">
+              <h2 className="editorial-title text-2xl mb-4 text-[#c49a3c]">{heading}</h2>
+              <p className="text-stone-600 text-sm leading-relaxed font-serif italic">
+                {body}
+              </p>
+            </section>
           ))}
         </div>
+
+        <footer className="mt-20 pt-8 border-t border-stone-200 text-center">
+          <p className="text-stone-400 text-[10px] uppercase tracking-[0.3em] font-bold">
+            Scentral · Usage Agreement
+          </p>
+        </footer>
       </div>
     </div>
   )
