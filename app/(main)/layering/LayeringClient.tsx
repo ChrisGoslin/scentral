@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { Search, X, AlertTriangle, Check } from 'lucide-react'
+import { Search, X, Info, Check } from 'lucide-react'
+import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
@@ -10,6 +11,7 @@ import LoadingShimmer from '@/components/ui/LoadingShimmer'
 import ErrorInline from '@/components/ui/ErrorInline'
 import Disclosure from '@/components/ui/Disclosure'
 import AuthSheet from '@/components/auth/AuthSheet'
+import SensoryAnatomy from '@/components/ui/SensoryAnatomy'
 
 export type LayeringFragrance = {
   id: string
@@ -211,16 +213,31 @@ function ResultCard({
         <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: '22px', fontStyle: 'italic' }}>{result.claude_note}</p>
       </div>
 
+      {/* Sensory Anatomy for the base fragrance */}
+      {slot1?.application_zone && (
+        <SensoryAnatomy zone={slot1.application_zone} />
+      )}
+
+      {/* Resonance Links */}
+      <div className="flex flex-col gap-2 pt-2">
+        {fragrances.map(f => (
+          <Link key={f.id} href={`/dna-match?search=${encodeURIComponent(f.family)}`} className="inline-flex items-center gap-1.5 group">
+            <span style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'underline' }}>See similar to {f.name}</span>
+            <span className="text-[10px] text-[var(--text-muted)] group-hover:translate-x-0.5 transition-transform">→</span>
+          </Link>
+        ))}
+      </div>
+
       {/* Commerce slot — HIDDEN in MVP */}
       {SHOW_COMMERCE_SLOT && (
         <div style={{ display: 'none' }} aria-hidden="true">{/* Where to buy — post-MVP */}</div>
       )}
 
-      {/* Anosmia warning */}
+      {/* Anosmia warning - subtle */}
       {result.anosmia_warning && (
-        <div className="flex items-start gap-2 rounded-[var(--r-btn)] p-3" style={{ background: 'rgba(196,121,75,0.1)', border: '1px solid var(--warning)' }}>
-          <AlertTriangle size={16} strokeWidth={1.75} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
-          <p style={{ fontSize: 13, color: 'var(--warning)' }}>{result.anosmia_warning}</p>
+        <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-[var(--r-btn)]" style={{ background: 'var(--surface-2)', border: '1px solid var(--line-light)' }}>
+          <Info size={14} style={{ color: 'var(--text-muted)' }} />
+          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{result.anosmia_warning}</p>
         </div>
       )}
 

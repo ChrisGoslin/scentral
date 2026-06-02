@@ -71,10 +71,10 @@ function FragranceCard({ f }: { f: CollectionFragrance }) {
   const shortName = f.name.length > 24 ? f.name.slice(0, 22) + '…' : f.name
 
   return (
-    <Link href={`/collection/${f.id}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded-[var(--r-card)]">
-      <Card className="flex flex-col gap-2 cursor-pointer hover:border-[var(--text-muted)] transition-colors">
+    <Card className="flex flex-col gap-2 transition-colors h-full group">
+      <Link href={`/collection/${f.id}`} className="flex flex-col gap-2 flex-1">
         <FragranceImage imageUrl={f.image_url} brand={f.brand} name={f.name} />
-        <div>
+        <div className="flex-1">
           <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: '14px' }}>
             {f.brand}
           </p>
@@ -86,11 +86,23 @@ function FragranceCard({ f }: { f: CollectionFragrance }) {
             <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: '14px' }}>{phaseLabel}</p>
           </div>
         </div>
-        {f.anosmia_risk === 'High' && (
-          <p style={{ fontSize: 10, color: 'var(--warning)', marginTop: -4 }}>⚠ High anosmia risk</p>
-        )}
-      </Card>
-    </Link>
+      </Link>
+      
+      <div className="mt-1 pt-2" style={{ borderTop: '1px solid var(--line-light)' }}>
+        <Link href={`/dna-match?search=${encodeURIComponent(f.family)}`} className="inline-block">
+          <p style={{ fontSize: 10, color: 'var(--accent)', textDecoration: 'underline' }}>
+            See similar profiles
+          </p>
+        </Link>
+      </div>
+
+      {f.anosmia_risk === 'High' && (
+        <div className="flex items-center gap-1 mt-1">
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--warning)' }} />
+          <p style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Sensory Caution</p>
+        </div>
+      )}
+    </Card>
   )
 }
 
