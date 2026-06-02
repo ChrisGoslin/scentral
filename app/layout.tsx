@@ -1,11 +1,39 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Inter, Fraunces } from "next/font/google";
 import "./globals.css";
-import BottomNav from "./components/BottomNav";
-import ToastProvider from "./components/ToastProvider";
+import "../lib/design/tokens.css";
+import PWARegistration from "./components/PWARegistration";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+  axes: ["SOFT", "WONK"],
+});
 
 export const metadata: Metadata = {
   title: "Scentral",
-  description: "Build fragrance combos, plan scent arcs, and share your shelf.",
+  description: "Your digital fragrance wardrobe.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Scentral",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#fafaf9",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -14,12 +42,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-slate-950">
-        <ToastProvider>
-          <main className="flex-1 pb-20">{children}</main>
-          <BottomNav />
-        </ToastProvider>
+    <html lang="en" className={`h-full antialiased ${inter.variable} ${fraunces.variable}`}>
+      <body className="min-h-full flex flex-col" style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "var(--font-ui)" }}>
+        <PWARegistration />
+        <main className="flex-1">
+          {children}
+        </main>
       </body>
     </html>
   );

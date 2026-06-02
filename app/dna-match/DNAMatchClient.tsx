@@ -20,14 +20,14 @@ interface DNAMatchResult {
 }
 
 const PALETTE = {
-  bg: '#06070a',
-  bgSecondary: '#0d1324',
-  accent: '#f5b76a', // Amber/Gold
-  accentGreen: '#4ade80',
-  accentBlue: '#38bdf8',
-  text: '#f8fafc',
-  textMuted: '#94a3b8',
-  border: '#1e293b',
+  bg: '#fafaf9', // Stone-50
+  bgSecondary: '#f5f5f4', // Stone-100
+  accent: '#c49a3c', // Fragrance Gold
+  accentGreen: '#16a34a',
+  accentBlue: '#2563eb',
+  text: '#1c1917', // Stone-900
+  textMuted: '#78716c', // Stone-500
+  border: '#e7e5e4', // Stone-200
 };
 
 export default function ResonanceClient({ fragrances }: { fragrances: Fragrance[] }) {
@@ -102,8 +102,8 @@ export default function ResonanceClient({ fragrances }: { fragrances: Fragrance[
   return (
     <div className="max-w-4xl mx-auto px-6 py-16 space-y-12">
       <header className="space-y-2">
-        <h1 className="text-5xl font-bold tracking-tight">Olfactory Resonance</h1>
-        <p className="text-slate-400 text-lg">Synthesize the chemical harmony between two essences.</p>
+        <h1 className="text-5xl font-serif italic text-stone-900 tracking-tight">Olfactory Resonance</h1>
+        <p className="text-stone-500 text-lg">Synthesize the chemical harmony between two essences.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -130,10 +130,10 @@ export default function ResonanceClient({ fragrances }: { fragrances: Fragrance[
         <button
           onClick={handleFindMatch}
           disabled={!fragA || !fragB || loading}
-          className={`w-full max-w-sm py-4 rounded-2xl font-bold text-lg transition-all shadow-xl ${
+          className={`w-full max-w-sm py-4 rounded-full font-bold text-lg transition-all shadow-md ${
             !fragA || !fragB || loading
-              ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-              : 'bg-amber-400 text-slate-900 hover:bg-amber-300 active:scale-95'
+              ? 'bg-stone-100 text-stone-400 cursor-not-allowed'
+              : 'bg-[#c49a3c] text-white hover:bg-[#a07d30] active:scale-95'
           }`}
         >
           {loading ? 'Synthesizing Resonance...' : 'Find Resonance'}
@@ -141,7 +141,7 @@ export default function ResonanceClient({ fragrances }: { fragrances: Fragrance[
       </div>
 
       {result && (
-        <div className="fade-up bg-slate-900/50 border border-slate-800 rounded-3xl p-10 backdrop-blur-xl text-center space-y-8">
+        <div className="fade-up bg-white border border-stone-200 rounded-3xl p-10 shadow-sm text-center space-y-8">
           <ScoreRing score={result.score} />
 
           <div className="space-y-4">
@@ -155,20 +155,20 @@ export default function ResonanceClient({ fragrances }: { fragrances: Fragrance[
             <div className="max-w-xl mx-auto">
               <button 
                 onClick={() => setExpanded(!expanded)}
-                className="text-amber-400/80 hover:text-amber-300 transition text-sm font-medium"
+                className="text-[#c49a3c] hover:text-[#a07d30] transition text-sm font-medium"
               >
                 {expanded ? 'Hide Editorial Note ▲' : 'Read Editorial Note ▼'}
               </button>
               
               {expanded && (
-                <div className="mt-6 p-6 bg-slate-950/50 rounded-2xl text-slate-300 italic leading-relaxed">
+                <div className="mt-6 p-6 bg-stone-50 rounded-2xl text-stone-700 italic leading-relaxed border border-stone-100">
                   {result.narrative}
                 </div>
               )}
             </div>
           </div>
 
-          {result.cached && <div className="text-[10px] text-slate-600 font-mono tracking-widest uppercase">🔄 Retrieved from Archives</div>}
+          {result.cached && <div className="text-[10px] text-stone-400 font-mono tracking-widest uppercase">🔄 Retrieved from Archives</div>}
         </div>
       )}
 
@@ -198,7 +198,7 @@ function FragrancePicker({
 
   return (
     <div className="relative space-y-3">
-      <label className="block text-xs font-semibold uppercase tracking-widest text-amber-400/80">{label}</label>
+      <label className="block text-xs font-bold uppercase tracking-widest text-stone-400">{label}</label>
       
       {!selected ? (
         <input
@@ -210,20 +210,20 @@ function FragrancePicker({
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-4 focus:outline-none focus:border-amber-400/50 transition text-white placeholder-slate-600"
+          className="w-full bg-white border border-stone-200 rounded-xl px-4 py-4 focus:outline-none focus:border-[#c49a3c]/50 transition text-stone-900 placeholder-stone-300 shadow-sm"
         />
       ) : (
-        <div className="flex items-center gap-4 bg-slate-900 border border-amber-400/30 rounded-2xl p-4 shadow-lg group">
+        <div className="flex items-center gap-4 bg-white border border-[#c49a3c]/30 rounded-2xl p-4 shadow-sm group">
           {selected.image_url && (
             <img src={selected.image_url} alt="" className="w-12 h-12 object-contain rounded-lg" />
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest">{selected.brand}</p>
-            <p className="text-white font-semibold truncate">{selected.name}</p>
+            <p className="text-stone-400 text-[10px] uppercase font-bold tracking-widest">{selected.brand}</p>
+            <p className="text-stone-900 font-semibold truncate">{selected.name}</p>
           </div>
           <button 
             onClick={() => onSelect(null)} 
-            className="text-slate-600 hover:text-red-400 transition"
+            className="text-stone-300 hover:text-red-400 transition text-xl"
           >
             ×
           </button>
@@ -231,7 +231,7 @@ function FragrancePicker({
       )}
 
       {open && !selected && filtered.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-stone-200 rounded-2xl shadow-xl z-50 overflow-hidden">
           {filtered.slice(0, 8).map((f) => (
             <div
               key={f.id}
@@ -240,12 +240,12 @@ function FragrancePicker({
                 onSearchChange('');
                 setOpen(false);
               }}
-              className="px-5 py-4 cursor-pointer hover:bg-slate-800 border-b border-slate-800 last:border-0 transition flex items-center gap-4"
+              className="px-5 py-4 cursor-pointer hover:bg-stone-50 border-b border-stone-100 last:border-0 transition flex items-center gap-4"
             >
               {f.image_url && <img src={f.image_url} alt="" className="w-8 h-8 object-contain opacity-70" />}
               <div className="flex-1 min-w-0">
-                <p className="text-slate-500 text-[10px] uppercase font-bold">{f.brand}</p>
-                <p className="text-slate-200 text-sm truncate">{f.name}</p>
+                <p className="text-stone-400 text-[10px] uppercase font-bold">{f.brand}</p>
+                <p className="text-stone-900 text-sm truncate">{f.name}</p>
               </div>
             </div>
           ))}
@@ -262,7 +262,7 @@ function ScoreRing({ score }: { score: number }) {
   return (
     <div className="relative w-40 h-40 mx-auto flex items-center justify-center">
       <svg width="160" height="160" viewBox="0 0 120 120" className="transform -rotate-90">
-        <circle cx="60" cy="60" r="45" fill="none" stroke="#1e293b" strokeWidth="2" />
+        <circle cx="60" cy="60" r="45" fill="none" stroke="#e7e5e4" strokeWidth="2" />
         <circle
           cx="60"
           cy="60"
@@ -277,14 +277,14 @@ function ScoreRing({ score }: { score: number }) {
         />
         <defs>
           <linearGradient id="resonance-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#f5b76a" />
-            <stop offset="100%" stopColor="#f87171" />
+            <stop offset="0%" stopColor="#c49a3c" />
+            <stop offset="100%" stopColor="#a07d30" />
           </linearGradient>
         </defs>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center space-y-0">
-        <span className="text-4xl font-bold text-white tracking-tighter">{score}</span>
-        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Harmony</span>
+        <span className="text-4xl font-bold text-stone-900 tracking-tighter">{score}</span>
+        <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold">Harmony</span>
       </div>
     </div>
   );

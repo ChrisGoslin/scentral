@@ -1,161 +1,245 @@
-import Anthropic from '@anthropic-ai/sdk'
-import { NextRequest, NextResponse } from 'next/server'
+// app/api/formulate/route.ts
+// Scentral — Formulate engine
+// POST /api/formulate
+// Input: fragrance1 (name+brand+phase+family), fragrance2 (same), context (time/weather/occasion)
+// Output: combo_name, application_steps[], sillage_prediction, occasion_tag, claude_note
+//
+// Requires: ANTHROPIC_API_KEY in .env.local
+// Install: npm install @anthropic-ai/sdk
 
-type FormulatePayload = {
-  brand_1?: string
-  name_1?: string
-  phase_1?: string
-  family_1?: string
-  application_zone_1?: string
-  application_method_1?: string
-  anosmia_risk_1?: string
-  brand_2?: string
-  name_2?: string
-  phase_2?: string
-  family_2?: string
-  application_zone_2?: string
-  application_method_2?: string
-  anosmia_risk_2?: string
-  time_of_day?: string
-  weather?: string
-  occasion?: string
+import { NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+// Globally persistent via Upstash Redis — shared across all serverless instances.
+// Limit: 10 Formulate calls per user per minute (sliding window).
+// Requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in env.
+//
+// If env vars are absent (local dev without Upstash), falls back to allowing
+// the request through so development is not blocked.
+let ratelimit: Ratelimit | null = null;
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  ratelimit = new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(10, '1 m'),
+    prefix: 'formulate',
+    analytics: true,
+  });
 }
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+type FragranceInput = {
+  name: string;
+  brand: string;
+  phase: number;
+  phase_label: string;
+  family: string;
+  projection: string;
+  application_zone: string;
+  application_method?: string; // optional — not all rows have this column yet
+  anosmia_risk: string;
+  lean: string;
+};
 
-const systemPrompt = `You are the core olfactory intelligence engine of Scentral, acting as an expert Solution Architect, Master Perfumer, and Molecular Fragrance Chemist. Your purpose is to act as a highly analytical 'decision engine' and 'personal fragrance operating system' that calculates the precise chemistry, application order, risks, and performance dynamics of layering two distinct fragrances.
+type FormulateRequest = {
+  fragrance1: FragranceInput;
+  fragrance2: FragranceInput;
+  context: {
+    time_of_day: string; // "morning" | "afternoon" | "evening" | "night"
+    weather: string; // "cold" | "cool" | "warm" | "hot"
+    occasion: string; // "daily" | "work" | "date" | "formal" | "casual"
+  };
+};
 
-CRITICAL OPERATIONAL RULES:
-1. RESPONSE FORMAT: You must ONLY output a single, structurally valid JSON object matching the exact schema provided. Do not enclose the JSON in markdown blocks (e.g., do not use \`\`\`json). Absolutely no prose, introductory greetings, concluding remarks, or markdown text outside the JSON object are permitted.
-2. APPLICATION PHASE ORDERING: You must analytically determine which fragrance acts as the "Base/Heavy Phase" (typically higher molecular weight, dense orientals, woods, heavy resins) and which acts as the "Top/Modifier Phase" (volatile accords, citruses, light florals). The ordered array \`application_steps\` must strictly reflect this physical ordering (heavy base first, lighter volatile scent layered second).
-3. SPECIFIC BODY ZONES: Never provide vague application advice such as "apply to skin" or "spray on pulse points". You must explicitly assign highly focused physical body zones (e.g., "Back of the neck", "Inner wrists", "Chest/Sternum", "Behind the ears").
-4. ANOSMIA (SCENT BLINDNESS) ASSESSMENT: Critically evaluate the cumulative olfactory density of the combination. If both fragrances contain high concentrations of heavy synthetic fixatives (e.g., Ambroxan, Iso E Super, heavy musks) or overlap intensely in the same scent family, calculate the olfactory fatigue index. If the risk is high, populate the \`anosmia_warning\` field with precise behavioral mitigation steps. If the risk is low, explicitly return null.
-5. PERFORMANCE ESTIMATION: \`predicted_sillage\` must strictly map to one of these exact values: "Beast", "Strong", "Moderate", or "Soft". \`predicted_hours\` must provide a precise expected longevity window based on base-note concentration (e.g., "6-8 hours", "10-12 hours").
+const SYSTEM_PROMPT = `You are Scentral's Formulate engine — a fragrance chemistry expert and master perfumer.
 
-REQUIRED JSON OUTPUT SCHEMA:
+Your role is to analyse two fragrances being layered together and generate:
+1. A creative, shareable combo name (2-4 words, evocative, TikTok-ready)
+2. Precise application steps in order (Phase 1 anchor first, then Phase 2/3)
+3. A sillage prediction (how the combo will project and evolve)
+4. An occasion tag (one short phrase)
+5. A brief expert note explaining WHY these two work chemically/olfactorily
+
+Naming formula — pick the best fit:
+- "[Mood] + [Key Note]" e.g. "Midnight Neroli", "Golden Oud"
+- "[Occasion] in [Place]" e.g. "Date Night in Dubai", "Rainy Dublin Morning"
+- "[Verb-ing] [Imagery]" e.g. "Chasing Amber Shadows", "Stealing Citrus Kisses"
+- "[Note 1] x [Note 2] [Context]" e.g. "Oud x Vanilla Afterglow"
+
+Rules:
+- Phase 1 (Endothermic Anchor) always applied first to pulse points — it anchors and lasts longest
+- Phase 2 (Textural Modulator) layered second — bridges and amplifies
+- Phase 3 (Exothermic Top) applied last — projects outward, evolves fastest
+- If anosmia risk is High for either fragrance, include a warning in the steps
+- Keep application steps practical and specific (e.g. "2 sprays Rifaaqat to inner wrists, let dry 30 seconds")
+- Keep the expert note to 2 sentences max
+
+Always respond with valid JSON only. No markdown, no preamble.`;
+
+function buildUserPrompt(req: FormulateRequest): string {
+  const { fragrance1, fragrance2, context } = req;
+
+  // Determine order: Phase 1 first, then Phase 2/3
+  const [anchor, top] =
+    fragrance1.phase <= fragrance2.phase ? [fragrance1, fragrance2] : [fragrance2, fragrance1];
+
+  return `Generate a Formulate result for this layering combination:
+
+FRAGRANCE A (apply first):
+- Name: ${anchor.name}
+- Brand: ${anchor.brand}
+- Phase: ${anchor.phase} — ${anchor.phase_label}
+- Olfactory Family: ${anchor.family}
+- Projection: ${anchor.projection}
+- Application Zone: ${anchor.application_zone}
+- Application Method: ${anchor.application_method ?? 'standard spray'}
+- Anosmia Risk: ${anchor.anosmia_risk}
+- Lean: ${anchor.lean}
+
+FRAGRANCE B (apply second):
+- Name: ${top.name}
+- Brand: ${top.brand}
+- Phase: ${top.phase} — ${top.phase_label}
+- Olfactory Family: ${top.family}
+- Projection: ${top.projection}
+- Application Zone: ${top.application_zone}
+- Application Method: ${top.application_method ?? 'standard spray'}
+- Anosmia Risk: ${top.anosmia_risk}
+- Lean: ${top.lean}
+
+CONTEXT:
+- Time of day: ${context.time_of_day}
+- Weather: ${context.weather}
+- Occasion: ${context.occasion}
+
+Respond with this exact JSON structure:
 {
-  "combo_names": [string, string, string],
+  "combo_name": "string (2-4 words, evocative, shareable)",
   "application_steps": [
-    {
-      "step": number,
-      "fragrance": string,
-      "sprays": number,
-      "zone": string,
-      "method": string,
-      "note": string
-    }
+    "string (step 1 — Fragrance A)",
+    "string (step 2 — wait/dry time if needed)",
+    "string (step 3 — Fragrance B)",
+    "string (optional step 4 — finishing tip)"
   ],
-  "why_it_works": string,
-  "predicted_sillage": string,
-  "predicted_hours": string,
-  "best_for": string,
-  "anosmia_warning": string | null,
-  "pro_tip": string
+  "sillage_prediction": "string (1-2 sentences on projection + evolution)",
+  "occasion_tag": "string (e.g. 'Winter Date Night', 'Friday Work Mode')",
+  "anosmia_warning": "string or null (null if no High risk fragrances)",
+  "claude_note": "string (2 sentences on why these two work chemically)"
+}`;
 }
 
-SCHEMA FIELD CONSTRAINTS:
-- \`combo_names\`: Exactly 3 evocative, luxury-tier creative naming options that reflect the combined accord profile.
-- \`application_steps\`: An ordered array of steps mapping out the explicit application sequence.
-- \`why_it_works\`: A hyper-concise 1-2 sentence molecular/chemical rationale explaining how the heart and base notes interface.
-- \`best_for\`: A concise one-line structural contextualization mapping the blend directly to the requested weather, time, and occasion constraints.
-- \`pro_tip\`: One advanced application technique specific to this exact pairing (e.g., spatial separation, strategic fabric misting, structural drying delays).`
+function parseJsonObject(text: string) {
+  const trimmed = text.trim();
+  const fencedMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const candidate = fencedMatch?.[1]?.trim() ?? trimmed;
 
-function valueOrDefault(value: unknown, fallback: string) {
-  return typeof value === 'string' && value.trim() ? value.trim() : fallback
-}
-
-function buildUserPrompt(body: FormulatePayload) {
-  return `Analyze the following olfactory layering request and compile the synthesis matrix:
-
-- Layer 1 Fragrance:
-  * Brand & Name: ${valueOrDefault(body.brand_1, 'Unknown')} ${valueOrDefault(body.name_1, 'Unknown')}
-  * Current Evaporation Phase: ${valueOrDefault(body.phase_1, 'Initial Application')}
-  * Olfactory Scent Family: ${valueOrDefault(body.family_1, 'Undisclosed')}
-  * Baseline Application Zone: ${valueOrDefault(body.application_zone_1, 'Pulse Points')}
-  * Preferred Spray Method: ${valueOrDefault(body.application_method_1, 'Standard Spray')}
-  * Contextual Anosmia Risk Factor: ${valueOrDefault(body.anosmia_risk_1, 'Low')}
-
-- Layer 2 Fragrance:
-  * Brand & Name: ${valueOrDefault(body.brand_2, 'Unknown')} ${valueOrDefault(body.name_2, 'Unknown')}
-  * Current Evaporation Phase: ${valueOrDefault(body.phase_2, 'Initial Application')}
-  * Olfactory Scent Family: ${valueOrDefault(body.family_2, 'Undisclosed')}
-  * Baseline Application Zone: ${valueOrDefault(body.application_zone_2, 'Pulse Points')}
-  * Preferred Spray Method: ${valueOrDefault(body.application_method_2, 'Standard Spray')}
-  * Contextual Anosmia Risk Factor: ${valueOrDefault(body.anosmia_risk_2, 'Low')}
-
-- Ambient Environmental & Situational Context Matrix:
-  * Target Time of Day: ${valueOrDefault(body.time_of_day, 'Anytime')}
-  * Macro Weather Condition: ${valueOrDefault(body.weather, 'Moderate Temp')}
-  * Targeted Social/Professional Occasion: ${valueOrDefault(body.occasion, 'General Wear')}
-
-Execute structural blending assessment and output the corresponding JSON payload.`
-}
-
-function parseJsonObject(contentText: string) {
   try {
-    return JSON.parse(contentText)
+    return JSON.parse(candidate);
   } catch {
-    const fallbackMatch = contentText.match(/\{[\s\S]*\}/)
-
-    if (!fallbackMatch) {
-      throw new Error('Generation engine did not return a JSON object.')
-    }
-
-    return JSON.parse(fallbackMatch[0])
+    const start = candidate.indexOf('{');
+    const end = candidate.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) throw new Error('No JSON object found');
+    return JSON.parse(candidate.slice(start, end + 1));
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json(
-        { error: 'ANTHROPIC_API_KEY is not configured for the Formulate engine.' },
-        { status: 500 }
-      )
+    // Formulate is public — auth is only required at save time (see /api/layering/save).
+    // Rate limit authenticated users when Upstash is configured.
+    if (ratelimit) {
+      const { cookies } = await import('next/headers');
+      const { createClient } = await import('@/utils/supabase/server');
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { success } = await ratelimit.limit(user.id);
+        if (!success) {
+          return NextResponse.json(
+            { error: 'Too many requests. Please wait a moment before formulating again.' },
+            { status: 429 }
+          );
+        }
+      }
     }
 
-    const body = (await req.json()) as FormulatePayload
-    const userPrompt = buildUserPrompt(body)
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'Formulate is not configured yet. Missing ANTHROPIC_API_KEY.' },
+        { status: 500 }
+      );
+    }
 
-    const message = await anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5-20251001',
+    const client = new Anthropic({ apiKey });
+    const body: FormulateRequest = await req.json();
+
+    if (!body.fragrance1 || !body.fragrance2) {
+      return NextResponse.json(
+        { error: 'fragrance1 and fragrance2 are required' },
+        { status: 400 }
+      );
+    }
+
+    // Default context if not provided
+    const context = body.context ?? {
+      time_of_day: 'evening',
+      weather: 'cool',
+      occasion: 'casual',
+    };
+
+    // Prompt caching: the system prompt is large and identical on every call.
+    // Passing it as a content block with cache_control tells Anthropic to cache it
+    // server-side for 5 minutes. Cached tokens cost ~10% of normal input price,
+    // saving ~90% on the system prompt portion for repeated requests.
+    //
+    // Note: Haiku 4.5 requires a minimum of 4,096 tokens before caching activates.
+    // As the system prompt grows (more accord families, scoring rules, etc.)
+    // caching will kick in automatically — no code changes needed.
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      system: systemPrompt,
+      system: [
+        {
+          type: 'text',
+          text: SYSTEM_PROMPT,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
       messages: [
         {
           role: 'user',
-          content: userPrompt,
+          content: buildUserPrompt({ ...body, context }),
         },
       ],
-    })
+    });
 
-    const contentText = message.content
-      .filter(block => block.type === 'text')
-      .map(block => block.text)
-      .join('\n')
-      .trim()
-
-    if (!contentText) {
-      return NextResponse.json(
-        { error: 'Generation engine returned an invalid content structure.' },
-        { status: 500 }
-      )
+    // Extract text content from response
+    const content = message.content[0];
+    if (content.type !== 'text') {
+      throw new Error('Unexpected response type from Claude');
     }
 
-    const jsonParsed = parseJsonObject(contentText)
+    // Parse JSON response
+    let result;
+    try {
+      result = parseJsonObject(content.text);
+    } catch {
+      console.error('Failed to parse Claude response as JSON:', content.text);
+      return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
+    }
 
-    return NextResponse.json(jsonParsed, { status: 200 })
+    return NextResponse.json({
+      success: true,
+      result,
+      tokens_used: message.usage.input_tokens + message.usage.output_tokens,
+      cache_read_tokens: message.usage.cache_read_input_tokens ?? 0,
+      cache_created_tokens: message.usage.cache_creation_input_tokens ?? 0,
+    });
   } catch (error) {
-    console.error('Scentral Formulate Engine Failure Matrix:', error)
-
-    return NextResponse.json(
-      {
-        error: 'Internal Synthesis Routing Error',
-        details: error instanceof Error ? error.message : 'Unhandled exception during system prompt processing.',
-      },
-      { status: 500 }
-    )
+    console.error('Formulate route error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

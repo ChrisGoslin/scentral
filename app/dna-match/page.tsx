@@ -4,7 +4,7 @@ import DNAMatchClient from './DNAMatchClient';
 
 async function loadFragrances() {
   const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient(cookieStore);
 
   const { data: fragrances, error } = await supabase
     .from('fragrances')
