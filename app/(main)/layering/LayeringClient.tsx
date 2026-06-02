@@ -1,13 +1,13 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { Search, X } from 'lucide-react'
+import { Search, X, AlertTriangle } from 'lucide-react'
 import Button from '@/components/ui/Button'
-import Card from '@/components/ui/Card'
 import Chip from '@/components/ui/Chip'
 import Sheet from '@/components/ui/Sheet'
 import LoadingShimmer from '@/components/ui/LoadingShimmer'
 import ErrorInline from '@/components/ui/ErrorInline'
+import Disclosure from '@/components/ui/Disclosure'
 
 export type LayeringFragrance = {
   id: string
@@ -47,6 +47,34 @@ const OCCASION_API_MAP: Record<Occasion, string> = {
 
 const PHASE_LABEL: Record<number, string> = { 1: 'Anchor', 2: 'Modulator', 3: 'Top' }
 
+/* ── Helpers ────────────────────────────────────────────── */
+
+function parseSprayCount(steps: string[], fragName: string): number | null {
+  const words = fragName.toLowerCase().split(' ').slice(0, 2)
+  for (const step of steps) {
+    const s = step.toLowerCase()
+    const nameMatch = words.some(w => s.includes(w))
+    if (nameMatch) {
+      const m = s.match(/(\d+)\s*sprays?/)
+      if (m) return parseInt(m[1], 10)
+    }
+  }
+  return null
+}
+
+function parseLasts(sillage: string): string | null {
+  const range = sillage.match(/(\d+)\s*[-–]\s*(\d+)\s*hours?/i)
+  if (range) return `~${range[1]}–${range[2]}h`
+  const single = sillage.match(/(\d+)\s*hours?/i)
+  if (single) return `~${single[1]}h`
+  return null
+}
+
+/* ── Commerce flag ── HIDDEN in MVP */
+const SHOW_COMMERCE_SLOT = false
+
+/* ── Sub-components ─────────────────────────────────────── */
+
 function PhaseTag({ phase }: { phase: 1 | 2 | 3 }) {
   return (
     <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -55,15 +83,7 @@ function PhaseTag({ phase }: { phase: 1 | 2 | 3 }) {
   )
 }
 
-function PickerSlot({
-  label,
-  fragrance,
-  onClick,
-}: {
-  label: string
-  fragrance: LayeringFragrance | null
-  onClick: () => void
-}) {
+function PickerSlot({ label, fragrance, onClick }: { label: string; fragrance: LayeringFragrance | null; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -91,17 +111,7 @@ function PickerSlot({
   )
 }
 
-function FragrancePickerRow({
-  f,
-  selected,
-  disabled,
-  onClick,
-}: {
-  f: LayeringFragrance
-  selected: boolean
-  disabled: boolean
-  onClick: () => void
-}) {
+function FragrancePickerRow({ f, selected, disabled, onClick }: { f: LayeringFragrance; selected: boolean; disabled: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -114,17 +124,118 @@ function FragrancePickerRow({
       }}
     >
       <div className="flex-1 min-w-0">
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          {f.brand}
-        </p>
-        <p style={{ fontSize: 14, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: '18px' }}>
-          {f.name}
-        </p>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{f.brand}</p>
+        <p style={{ fontSize: 14, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: '18px' }}>{f.name}</p>
       </div>
       <PhaseTag phase={f.phase} />
     </button>
   )
 }
+
+/* ── Result card ────────────────────────────────────────── */
+
+function ResultCard({
+  result,
+  slot1,
+  slot2,
+  onTryAnother,
+}: {
+  result: FormulateResult
+  slot1: LayeringFragrance | null
+  slot2: LayeringFragrance | null
+  onTryAnother: () => void
+}) {
+  const fragrances = [slot1, slot2].filter(Boolean) as LayeringFragrance[]
+  const lasts = parseLasts(result.sillage_prediction)
+
+  const sprayRows = fragrances.map(f => ({
+    name: f.name,
+    brand: f.brand,
+    sprays: parseSprayCount(result.application_steps, f.name),
+  }))
+
+  return (
+    <div className="flex flex-col gap-5 py-4">
+      {/* Title */}
+      <div>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', lineHeight: '28px' }}>
+          Your formulation
+        </h2>
+        {result.occasion_tag && (
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{result.occasion_tag}</p>
+        )}
+      </div>
+
+      {/* Spray rows */}
+      <div className="flex flex-col gap-2">
+        {sprayRows.map(({ name, brand, sprays }) => (
+          <div key={name} className="flex items-baseline justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{brand} </span>
+              <span style={{ fontSize: 15, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{name}</span>
+            </div>
+            <span style={{ fontSize: 15, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+              {sprays !== null ? `→ ${sprays} sprays` : '→ per instructions'}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Sillage + Lasts */}
+      <div className="flex flex-col gap-1.5" style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+        <div className="flex justify-between">
+          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sillage</span>
+          <span style={{ fontSize: 13, color: 'var(--text)', maxWidth: '60%', textAlign: 'right' }}>
+            {result.sillage_prediction.split('.')[0]}
+          </span>
+        </div>
+        {lasts && (
+          <div className="flex justify-between">
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Lasts</span>
+            <span style={{ fontSize: 13, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{lasts}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Why */}
+      <div>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+          Why
+        </p>
+        <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: '22px', fontStyle: 'italic' }}>
+          {result.claude_note}
+        </p>
+      </div>
+
+      {/* Reserved commerce slot — HIDDEN in MVP */}
+      {SHOW_COMMERCE_SLOT && (
+        /* Where to buy — post-MVP affiliate seam. Do not build in MVP. */
+        <div style={{ display: 'none' }} aria-hidden="true">
+          {/* Where to buy placeholder */}
+        </div>
+      )}
+
+      {/* Anosmia warning */}
+      {result.anosmia_warning && (
+        <div className="flex items-start gap-2 rounded-[var(--r-btn)] p-3" style={{ background: 'rgba(196,121,75,0.1)', border: '1px solid var(--warning)' }}>
+          <AlertTriangle size={16} strokeWidth={1.75} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+          <p style={{ fontSize: 13, color: 'var(--warning)' }}>{result.anosmia_warning}</p>
+        </div>
+      )}
+
+      {/* Save + Try another */}
+      <Button fullWidth>Save formulation</Button>
+      <Button variant="secondary" fullWidth onClick={onTryAnother}>
+        Try another
+      </Button>
+
+      {/* Disclosure */}
+      <Disclosure text="Personal recommendation — not sponsored." />
+    </div>
+  )
+}
+
+/* ── Main component ─────────────────────────────────────── */
 
 export default function LayeringClient({ fragrances }: { fragrances: LayeringFragrance[] }) {
   const [slot1, setSlot1] = useState<LayeringFragrance | null>(null)
@@ -219,9 +330,7 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
     <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--text)' }}>
       {/* Header */}
       <div className="px-4 pt-8 pb-4" style={{ borderBottom: '1px solid var(--line)' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)', lineHeight: '34px' }}>
-          Lab
-        </h1>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)', lineHeight: '34px' }}>Lab</h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Build a pairing</p>
       </div>
 
@@ -234,26 +343,16 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
 
         {/* Occasion chips */}
         <div className="flex flex-col gap-2">
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Occasion
-          </p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Occasion</p>
           <div className="flex gap-2 flex-wrap">
             {OCCASIONS.map(o => (
-              <Chip key={o} selected={occasion === o} onClick={() => setOccasion(o)}>
-                {o}
-              </Chip>
+              <Chip key={o} selected={occasion === o} onClick={() => setOccasion(o)}>{o}</Chip>
             ))}
           </div>
         </div>
 
         {/* Formulate button */}
-        <Button
-          fullWidth
-          disabled={!canFormulate}
-          onClick={handleFormulate}
-        >
-          Formulate
-        </Button>
+        <Button fullWidth disabled={!canFormulate} onClick={handleFormulate}>Formulate</Button>
 
         {!canFormulate && (
           <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', marginTop: -12 }}>
@@ -274,7 +373,6 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
             </button>
           </div>
 
-          {/* Search */}
           <div className="relative">
             <Search size={14} strokeWidth={1.75} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
@@ -284,15 +382,10 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
               onChange={e => setPickerQuery(e.target.value)}
               autoFocus
               className="w-full pl-9 pr-4 py-2.5 rounded-[var(--r-btn)] text-sm focus:outline-none"
-              style={{
-                background: 'var(--surface-2)',
-                border: '1px solid var(--line)',
-                color: 'var(--text)',
-              }}
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text)' }}
             />
           </div>
 
-          {/* List */}
           <div className="flex flex-col" style={{ marginLeft: -16, marginRight: -16 }}>
             {displayList.length === 0 ? (
               <p className="px-4 py-4" style={{ fontSize: 13, color: 'var(--text-muted)' }}>
@@ -318,7 +411,7 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
       </Sheet>
 
       {/* Result sheet */}
-      <Sheet open={resultOpen} onClose={() => { if (!isLoading) { setResultOpen(false) } }}>
+      <Sheet open={resultOpen} onClose={() => { if (!isLoading) setResultOpen(false) }}>
         {isLoading ? (
           <div className="flex flex-col gap-4 py-4">
             <p style={{ fontSize: 16, color: 'var(--text-muted)' }}>Formulating…</p>
@@ -326,45 +419,13 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
           </div>
         ) : error ? (
           <div className="flex flex-col gap-4 py-4">
-            <ErrorInline message={error} onRetry={() => { handleFormulate() }} />
-            <Button variant="secondary" fullWidth onClick={handleTryAnother}>
-              Try another
-            </Button>
+            <ErrorInline message={error} onRetry={handleFormulate} />
+            <Button variant="secondary" fullWidth onClick={handleTryAnother}>Try another</Button>
           </div>
         ) : result ? (
-          /* Prompt 3 will fill in the full result card here */
-          <ResultCard
-            result={result}
-            slot1={slot1}
-            slot2={slot2}
-            onTryAnother={handleTryAnother}
-          />
+          <ResultCard result={result} slot1={slot1} slot2={slot2} onTryAnother={handleTryAnother} />
         ) : null}
       </Sheet>
-    </div>
-  )
-}
-
-/* Placeholder for Prompt 3 — result card scaffold */
-function ResultCard({
-  result,
-  slot1,
-  slot2,
-  onTryAnother,
-}: {
-  result: FormulateResult
-  slot1: LayeringFragrance | null
-  slot2: LayeringFragrance | null
-  onTryAnother: () => void
-}) {
-  return (
-    <div className="flex flex-col gap-4 py-4">
-      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)' }}>
-        {result.combo_name}
-      </h2>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{result.claude_note}</p>
-      <Button fullWidth>Save formulation</Button>
-      <Button variant="secondary" fullWidth onClick={onTryAnother}>Try another</Button>
     </div>
   )
 }
