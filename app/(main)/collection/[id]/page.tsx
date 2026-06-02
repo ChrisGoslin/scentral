@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { AlertTriangle } from 'lucide-react'
+import { Info } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import SensoryAnatomy from '@/components/ui/SensoryAnatomy'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -117,11 +118,26 @@ export default async function FragranceDetailPage({ params }: { params: Promise<
           )}
         </div>
 
-        {/* Anosmia warning */}
+        {/* Sensory Anatomy */}
+        {f.application_zone && (
+          <SensoryAnatomy zone={f.application_zone} />
+        )}
+
+        {/* Resonance Link */}
+        <div className="pt-2">
+          <Link href={`/dna-match?search=${encodeURIComponent(f.family)}`} className="inline-flex items-center gap-1.5 group">
+            <span style={{ fontSize: 13, color: 'var(--accent)', textDecoration: 'underline' }}>See similar profiles</span>
+            <span className="text-[10px] text-[var(--text-muted)] group-hover:translate-x-0.5 transition-transform">→</span>
+          </Link>
+        </div>
+
+        {/* Anosmia warning - subtle */}
         {f.anosmia_risk === 'High' && (
-          <div className="flex items-start gap-2 rounded-[var(--r-btn)] p-3" style={{ background: 'var(--surface-2)' }}>
-            <AlertTriangle size={16} strokeWidth={1.75} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 1 }} />
-            <p style={{ fontSize: 13, color: 'var(--warning)' }}>High overpowering risk — apply sparingly</p>
+          <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-[var(--r-btn)]" style={{ background: 'var(--surface-2)', border: '1px solid var(--line-light)' }}>
+            <Info size={14} style={{ color: 'var(--text-muted)' }} />
+            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              Note: High sensory risk. Recommended for open environments.
+            </p>
           </div>
         )}
 
