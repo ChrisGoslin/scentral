@@ -130,7 +130,7 @@ export default function WardrobePage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center text-stone-400">
         <p className="animate-pulse">Consulting the archives...</p>
       </div>
     );
@@ -138,17 +138,17 @@ export default function WardrobePage() {
 
   if (!userId) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#06070a] via-[#071022] to-[#0b0f13] text-white flex items-center justify-center p-6">
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center p-6">
         <main className="max-w-md w-full text-center space-y-6">
-          <h1 className="text-4xl font-semibold tracking-tight">The Wardrobe</h1>
-          <p className="text-slate-400 text-lg">
+          <h1 className="text-4xl font-serif italic tracking-tight">The Wardrobe</h1>
+          <p className="text-stone-500 text-lg">
             Your personal fragrance sanctuary is reserved for registered curators.
           </p>
           <a
             href="/login"
-            className="inline-block bg-amber-400 text-slate-900 px-8 py-3 rounded-full font-medium hover:bg-amber-300 transition shadow-lg"
+            className="inline-block bg-[#c49a3c] text-white px-8 py-3 rounded-full font-bold transition hover:bg-[#a07d30] shadow-sm"
           >
-            Enter the Sanctuary
+            Sign in to access
           </a>
         </main>
       </div>

@@ -1,26 +1,26 @@
 :root {
   /* Backgrounds */
-  --bg: #0E0E11;
-  --surface: #1A1A20;
-  --surface-2: #26262E;
+  --bg: #fafaf9; /* Stone-50 */
+  --surface: #f5f5f4; /* Stone-100 */
+  --surface-2: #e7e5e4; /* Stone-200 */
 
   /* Text */
-  --text: #F4F1EA;
-  --text-muted: #A7A39B;
+  --text: #1c1917; /* Stone-900 */
+  --text-muted: #78716c; /* Stone-500 */
 
   /* Accent */
-  --accent: #C9A24B;
-  --accent-press: #A8842F;
+  --accent: #c49a3c; /* Fragrance Gold */
+  --accent-press: #a07d30;
 
   /* Semantic */
-  --line: #33333C;
-  --positive: #7E9A6E;
-  --warning: #C4794B;
-  --danger: #B4503E;
+  --line: #e7e5e4; /* Stone-200 */
+  --positive: #15803d;
+  --warning: #d97706;
+  --danger: #b91c1c;
 
   /* Border radius */
-  --r-card: 14px;
-  --r-btn: 10px;
+  --r-card: 0px; /* Sharp editorial edges */
+  --r-btn: 9999px; /* Pill buttons */
   --r-chip: 999px;
 
   /* Spacing */
