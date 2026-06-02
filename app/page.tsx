@@ -40,7 +40,7 @@ export default function Home() {
               Start Accord Creator
             </button>
 
-            <Link href="/library" className="px-4 py-3 rounded-full border border-slate-700 text-slate-200 hover:bg-slate-800/60 transition">
+            <Link href="/collection" className="px-4 py-3 rounded-full border border-slate-700 text-slate-200 hover:bg-slate-800/60 transition">
               Open Wardrobe
             </Link>
           </div>

@@ -5,33 +5,49 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 
 const NAV_ITEMS = [
-  { label: 'Wardrobe', href: '/collection' },
-  { label: 'Lab', href: '/layering' },
-  { label: 'Ritual', href: '/schedule' },
-  { label: 'Identity', href: '/profile' }
+  { label: 'Collection', href: '/collection' },
+  { label: 'Lab',        href: '/layering'   },
+  { label: 'You',        href: '/you'         },
 ]
 
 export default function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-200 bg-white/80 backdrop-blur-md px-2 sm:px-6">
-      <div className="mx-auto grid h-16 max-w-md grid-cols-4 items-center">
-        {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50"
+      style={{
+        background: 'var(--surface)',
+        borderTop: '1px solid var(--line)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
+    >
+      <div className="mx-auto grid h-14 max-w-md items-center gap-1" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        {NAV_ITEMS.map(item => {
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
           return (
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center justify-center gap-1 group transition-all duration-300"
+              className="flex flex-col items-center justify-center gap-1 py-1 min-h-[44px]"
             >
-              <span className={`text-[10px] uppercase tracking-[0.1em] font-bold transition-colors duration-300 ${active ? 'text-[#c49a3c]' : 'text-stone-400 group-hover:text-stone-600'}`}>
+              <span
+                style={{
+                  fontSize: 10,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.12em',
+                  fontWeight: 700,
+                  color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                  transition: `color var(--motion-fast)`,
+                }}
+              >
                 {item.label}
               </span>
-              {active && (
+              {isActive && (
                 <motion.div
                   layoutId="nav-underline"
-                  className="h-0.5 w-4 bg-[#c49a3c]"
+                  className="rounded-full"
+                  style={{ height: 2, width: 16, background: 'var(--accent)' }}
                 />
               )}
             </Link>
