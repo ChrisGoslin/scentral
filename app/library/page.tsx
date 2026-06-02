@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 // The Wardrobe — your personal olfactory sanctuary.

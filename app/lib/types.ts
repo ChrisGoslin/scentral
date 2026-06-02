@@ -9,6 +9,7 @@ export interface Fragrance {
   name: string;
   brand: string;
   notes: FragranceNotes;
+  image_url?: string | null;
 }
 
 export interface CombinerState {

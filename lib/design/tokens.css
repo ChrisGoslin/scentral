@@ -1,0 +1,41 @@
+:root {
+  /* Backgrounds */
+  --bg: #0E0E11;
+  --surface: #1A1A20;
+  --surface-2: #26262E;
+
+  /* Text */
+  --text: #F4F1EA;
+  --text-muted: #A7A39B;
+
+  /* Accent */
+  --accent: #C9A24B;
+  --accent-press: #A8842F;
+
+  /* Semantic */
+  --line: #33333C;
+  --positive: #7E9A6E;
+  --warning: #C4794B;
+  --danger: #B4503E;
+
+  /* Border radius */
+  --r-card: 14px;
+  --r-btn: 10px;
+  --r-chip: 999px;
+
+  /* Spacing */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 16px;
+  --sp-4: 24px;
+  --sp-5: 32px;
+
+  /* Motion */
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+
+  /* Fonts (set by next/font via CSS variables) */
+  --font-display: var(--font-fraunces, "Fraunces", Georgia, serif);
+  --font-ui: var(--font-inter, "Inter", -apple-system, "Segoe UI", Roboto, sans-serif);
+}
