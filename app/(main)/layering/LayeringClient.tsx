@@ -1,6 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
+import { Search, X } from 'lucide-react'
+import Button from '@/components/ui/Button'
+import Card from '@/components/ui/Card'
+import Chip from '@/components/ui/Chip'
+import Sheet from '@/components/ui/Sheet'
+import LoadingShimmer from '@/components/ui/LoadingShimmer'
+import ErrorInline from '@/components/ui/ErrorInline'
 
 export type LayeringFragrance = {
   id: string
@@ -18,23 +25,7 @@ export type LayeringFragrance = {
   image_url: string | null
 }
 
-export type LayeringProtocol = {
-  id: string
-  name: string
-  concept: string
-  base_fragrance_name: string
-  base_sprays: number | string
-  top_fragrance_name: string
-  top_sprays: number | string
-  predicted_sillage: string
-  predicted_hours: number | string
-  occasion: string
-  season: string
-  anosmia_warning: string | null
-  application_note: string | null
-}
-
-type FormulateResult = {
+export type FormulateResult = {
   combo_name: string
   application_steps: string[]
   sillage_prediction: string
@@ -43,551 +34,337 @@ type FormulateResult = {
   claude_note: string
 }
 
-type Context = {
-  time_of_day: string
-  weather: string
-  occasion: string
+const OCCASIONS = ['Anytime', 'Date', 'Office', 'Gym', 'Formal'] as const
+type Occasion = typeof OCCASIONS[number]
+
+const OCCASION_API_MAP: Record<Occasion, string> = {
+  Anytime: 'anytime',
+  Date: 'date',
+  Office: 'work',
+  Gym: 'gym',
+  Formal: 'formal',
 }
 
-const PHASE_CONFIG = {
-  1: { badge: 'bg-stone-200 text-stone-700', dot: 'bg-[#c49a3c]', label: 'Anchor' },
-  2: { badge: 'bg-stone-200 text-stone-700', dot: 'bg-[#c49a3c]', label: 'Modulate' },
-  3: { badge: 'bg-stone-200 text-stone-700', dot: 'bg-[#c49a3c]', label: 'Top' },
-} as const
+const PHASE_LABEL: Record<number, string> = { 1: 'Anchor', 2: 'Modulator', 3: 'Top' }
 
-const TIME_OPTIONS = ['morning', 'afternoon', 'evening', 'night']
-const WEATHER_OPTIONS = ['cold', 'cool', 'warm', 'hot']
-const OCCASION_OPTIONS = ['daily', 'work', 'date', 'formal', 'casual']
-
-function PhaseBadge({ phase }: { phase: 1 | 2 | 3 }) {
-  const c = PHASE_CONFIG[phase]
+function PhaseTag({ phase }: { phase: 1 | 2 | 3 }) {
   return (
-    <span className={`text-[10px] uppercase tracking-tighter px-2 py-0.5 rounded-sm font-bold flex items-center gap-1.5 ${c.badge}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-      PH{phase}
+    <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+      {PHASE_LABEL[phase]}
     </span>
   )
 }
 
-function AnosmíaBadge({ risk }: { risk: 'High' | 'Medium' | 'Low' }) {
-  const cls =
-    risk === 'High'
-      ? 'text-red-700'
-      : risk === 'Medium'
-      ? 'text-yellow-700'
-      : 'text-stone-500'
-  return <span className={`text-[10px] font-bold uppercase tracking-tighter ${cls}`}>ARR {risk}</span>
-}
-
-function FragrancePickerCard({
-  f,
-  selected,
-  onClick,
-}: {
-  f: LayeringFragrance
-  selected: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`luxury-card w-full text-left p-4 flex flex-col gap-2 transition-all ${
-        selected
-          ? 'ring-2 ring-[#c49a3c] border-[#c49a3c] shadow-md'
-          : ''
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        {f.image_url && (
-          <img
-            src={f.image_url}
-            alt={f.name}
-            className="w-8 h-8 object-contain flex-shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-          />
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-wider text-stone-500 truncate">{f.brand}</p>
-          <p className="text-stone-900 font-serif text-sm font-medium truncate">{f.name}</p>
-        </div>
-        <PhaseBadge phase={f.phase} />
-      </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <AnosmíaBadge risk={f.anosmia_risk} />
-        <span className="text-[10px] text-stone-400 uppercase tracking-widest truncate">{f.application_zone}</span>
-      </div>
-    </button>
-  )
-}
-
-function PairingPickerCard({
-  f,
-  selected,
-  onClick,
-}: {
-  f: LayeringFragrance
-  selected: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`luxury-card w-full text-left p-4 flex flex-col gap-2 transition-all ${
-        selected
-          ? 'ring-2 ring-[#c49a3c] border-[#c49a3c] shadow-md'
-          : ''
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-wider text-stone-500 truncate">{f.brand}</p>
-          <p className="text-stone-900 font-serif text-sm font-semibold truncate">{f.name}</p>
-        </div>
-        <PhaseBadge phase={f.phase} />
-      </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <AnosmíaBadge risk={f.anosmia_risk} />
-        <span className="text-[10px] text-stone-400 uppercase tracking-widest">{f.application_zone}</span>
-      </div>
-    </button>
-  )
-}
-
-function ProtocolCard({
-  protocol,
-  highlighted,
-}: {
-  protocol: LayeringProtocol
-  highlighted: boolean
-}) {
-  return (
-    <div
-      className={`luxury-card p-4 flex flex-col gap-3 transition-all ${
-        highlighted ? 'ring-2 ring-[#c49a3c] border-[#c49a3c] shadow-md' : ''
-      }`}
-    >
-      <div>
-        <h3 className="text-stone-900 font-serif font-bold text-base">{protocol.name}</h3>
-        <p className="text-stone-500 text-sm mt-0.5">{protocol.concept}</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-stone-50 rounded-sm p-2.5 border border-stone-100">
-          <p className="text-stone-400 text-[10px] uppercase tracking-widest mb-1">Base (apply first)</p>
-          <p className="text-stone-900 text-sm font-medium">{protocol.base_fragrance_name}</p>
-          <p className="text-[#c49a3c] text-[10px] font-bold uppercase tracking-tighter mt-0.5">{protocol.base_sprays} sprays</p>
-        </div>
-        <div className="bg-stone-50 rounded-sm p-2.5 border border-stone-100">
-          <p className="text-stone-400 text-[10px] uppercase tracking-widest mb-1">Top (apply after)</p>
-          <p className="text-stone-900 text-sm font-medium">{protocol.top_fragrance_name}</p>
-          <p className="text-[#c49a3c] text-[10px] font-bold uppercase tracking-tighter mt-0.5">{protocol.top_sprays} sprays</p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] uppercase tracking-tighter">
-        <span className="text-stone-400">
-          <span className="text-stone-300 font-bold uppercase tracking-widest mr-1">Sillage:</span>
-          <span className="text-stone-600 font-bold">{protocol.predicted_sillage}</span>
-        </span>
-        <span className="text-stone-400">
-          <span className="text-stone-300 font-bold uppercase tracking-widest mr-1">Duration:</span>
-          <span className="text-stone-600 font-bold">{protocol.predicted_hours}h</span>
-        </span>
-        <span className="text-stone-400">
-          <span className="text-stone-300 font-bold uppercase tracking-widest mr-1">Occasion:</span>
-          <span className="text-stone-600 font-bold">{protocol.occasion}</span>
-        </span>
-        <span className="text-stone-400">
-          <span className="text-stone-300 font-bold uppercase tracking-widest mr-1">Season:</span>
-          <span className="text-stone-600 font-bold">{protocol.season}</span>
-        </span>
-      </div>
-
-      {protocol.anosmia_warning && (
-        <div className="bg-red-50 border border-red-100 rounded-sm px-3 py-2">
-          <p className="text-red-700 text-[10px] font-bold uppercase tracking-tighter">⚠ {protocol.anosmia_warning}</p>
-        </div>
-      )}
-
-      {protocol.application_note && (
-        <p className="text-stone-400 text-[10px] uppercase tracking-widest italic">{protocol.application_note}</p>
-      )}
-    </div>
-  )
-}
-
-function ContextPill({
+function PickerSlot({
   label,
-  active,
+  fragrance,
   onClick,
 }: {
   label: string
-  active: boolean
+  fragrance: LayeringFragrance | null
   onClick: () => void
 }) {
   return (
     <button
       onClick={onClick}
-      className={`text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-full border transition-all ${
-        active
-          ? 'bg-stone-900 border-stone-900 text-stone-50 font-bold'
-          : 'border-stone-200 text-stone-400 hover:border-stone-400 hover:text-stone-600'
-      }`}
+      className="flex-1 rounded-[var(--r-card)] border p-4 flex flex-col gap-1 transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] min-h-[80px]"
+      style={{
+        background: 'var(--surface)',
+        borderColor: fragrance ? 'var(--accent)' : 'var(--line)',
+        boxShadow: fragrance ? '0 0 12px rgba(201,162,75,0.1)' : undefined,
+      }}
     >
-      {label}
+      <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        {label}
+      </p>
+      {fragrance ? (
+        <>
+          <p style={{ fontSize: 14, fontFamily: 'var(--font-display)', color: 'var(--text)', lineHeight: '18px' }}>
+            {fragrance.name}
+          </p>
+          <PhaseTag phase={fragrance.phase} />
+        </>
+      ) : (
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Tap to pick</p>
+      )}
     </button>
   )
 }
 
-function FormulatePanel({
-  fragrance1,
-  fragrance2,
-  context,
-  setContext,
-  onFormulate,
-  isLoading,
-  result,
-  error,
+function FragrancePickerRow({
+  f,
+  selected,
+  disabled,
+  onClick,
 }: {
-  fragrance1: LayeringFragrance
-  fragrance2: LayeringFragrance
-  context: Context
-  setContext: (c: Context) => void
-  onFormulate: () => void
-  isLoading: boolean
-  result: FormulateResult | null
-  error: string | null
+  f: LayeringFragrance
+  selected: boolean
+  disabled: boolean
+  onClick: () => void
 }) {
   return (
-    <section className="luxury-card p-6 flex flex-col gap-6">
-      {/* Combo header */}
-      <div>
-        <p className="editorial-subtitle mb-2">Ready to Formulate</p>
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-stone-900 font-serif font-semibold">{fragrance1.name}</span>
-          <span className="text-stone-400">+</span>
-          <span className="text-stone-900 font-serif font-semibold">{fragrance2.name}</span>
-        </div>
-        <p className="text-stone-500 text-[10px] uppercase tracking-widest mt-1">
-          Ph{fragrance1.phase} {fragrance1.lean} · Ph{fragrance2.phase} {fragrance2.lean}
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
+      style={{
+        opacity: disabled ? 0.4 : 1,
+        background: selected ? 'var(--surface-2)' : undefined,
+        borderLeft: selected ? '2px solid var(--accent)' : '2px solid transparent',
+      }}
+    >
+      <div className="flex-1 min-w-0">
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          {f.brand}
+        </p>
+        <p style={{ fontSize: 14, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: '18px' }}>
+          {f.name}
         </p>
       </div>
-
-      {/* Context selectors */}
-      <div className="flex flex-col gap-4">
-        <div>
-          <p className="editorial-subtitle mb-2 text-[10px]">When?</p>
-          <div className="flex flex-wrap gap-2">
-            {TIME_OPTIONS.map(t => (
-              <ContextPill
-                key={t}
-                label={t}
-                active={context.time_of_day === t}
-                onClick={() => setContext({ ...context, time_of_day: t })}
-              />
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="editorial-subtitle mb-2 text-[10px]">Weather?</p>
-          <div className="flex flex-wrap gap-2">
-            {WEATHER_OPTIONS.map(w => (
-              <ContextPill
-                key={w}
-                label={w}
-                active={context.weather === w}
-                onClick={() => setContext({ ...context, weather: w })}
-              />
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="editorial-subtitle mb-2 text-[10px]">Occasion?</p>
-          <div className="flex flex-wrap gap-2">
-            {OCCASION_OPTIONS.map(o => (
-              <ContextPill
-                key={o}
-                label={o}
-                active={context.occasion === o}
-                onClick={() => setContext({ ...context, occasion: o })}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Formulate button */}
-      <button
-        onClick={onFormulate}
-        disabled={isLoading}
-        className="self-start px-6 py-2.5 rounded-sm bg-stone-900 text-stone-50 font-bold text-xs uppercase tracking-widest hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        {isLoading ? 'Formulating…' : 'Formulate'}
-      </button>
-
-      {/* Error */}
-      {error && (
-        <div className="bg-red-50 border border-red-100 rounded-sm px-4 py-3">
-          <p className="text-red-700 text-xs font-bold uppercase tracking-tighter">⚠ {error}</p>
-        </div>
-      )}
-
-      {/* Result */}
-      {result && (
-        <div className="border-t border-stone-100 pt-6 flex flex-col gap-5">
-          <div>
-            <h3 className="editorial-title text-2xl">{result.combo_name}</h3>
-            <span className="inline-block mt-2 text-[10px] px-2.5 py-1 rounded-sm bg-stone-200 text-stone-700 font-bold uppercase tracking-tighter">
-              {result.occasion_tag}
-            </span>
-          </div>
-
-          <div>
-            <p className="editorial-subtitle text-[10px] mb-2">Application</p>
-            <ol className="flex flex-col gap-2">
-              {result.application_steps.map((step, i) => (
-                <li key={i} className="flex gap-3 text-sm">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-stone-100 text-stone-400 text-[10px] flex items-center justify-center font-bold">
-                    {i + 1}
-                  </span>
-                  <span className="text-stone-600 font-serif">{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          <div>
-            <p className="editorial-subtitle text-[10px] mb-1">Sillage</p>
-            <p className="text-stone-600 font-serif text-sm">{result.sillage_prediction}</p>
-          </div>
-
-          <div>
-            <p className="editorial-subtitle text-[10px] mb-1">Why these work</p>
-            <p className="text-stone-600 font-serif text-sm italic">{result.claude_note}</p>
-          </div>
-
-          {result.anosmia_warning && (
-            <div className="bg-red-50 border border-red-100 rounded-sm px-4 py-3">
-              <p className="text-red-700 text-xs font-bold uppercase tracking-tighter">⚠ {result.anosmia_warning}</p>
-            </div>
-          )}
-        </div>
-      )}
-    </section>
+      <PhaseTag phase={f.phase} />
+    </button>
   )
 }
 
-export default function LayeringClient({
-  fragrances,
-  protocols,
-}: {
-  fragrances: LayeringFragrance[]
-  protocols: LayeringProtocol[]
-}) {
-  const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [secondId, setSecondId] = useState<string | null>(null)
-  const [context, setContext] = useState<Context>({ time_of_day: 'evening', weather: 'cool', occasion: 'casual' })
-  const [result, setResult] = useState<FormulateResult | null>(null)
+export default function LayeringClient({ fragrances }: { fragrances: LayeringFragrance[] }) {
+  const [slot1, setSlot1] = useState<LayeringFragrance | null>(null)
+  const [slot2, setSlot2] = useState<LayeringFragrance | null>(null)
+  const [occasion, setOccasion] = useState<Occasion>('Anytime')
+  const [pickerFor, setPickerFor] = useState<'slot1' | 'slot2' | null>(null)
+  const [pickerQuery, setPickerQuery] = useState('')
+  const [resultOpen, setResultOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [formulateError, setFormulateError] = useState<string | null>(null)
+  const [result, setResult] = useState<FormulateResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const selected = fragrances.find(f => f.id === selectedId) ?? null
-  const second = fragrances.find(f => f.id === secondId) ?? null
+  const canFormulate = slot1 !== null && slot2 !== null && slot1.id !== slot2.id
 
   const displayList = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const q = pickerQuery.trim().toLowerCase()
     if (!q) return fragrances
-    return fragrances.filter(
-      f =>
-        f.name.toLowerCase().includes(q) ||
-        f.brand.toLowerCase().includes(q)
+    return fragrances.filter(f =>
+      f.name.toLowerCase().includes(q) || f.brand.toLowerCase().includes(q)
     )
-  }, [fragrances, query])
+  }, [fragrances, pickerQuery])
 
-  const pairings = useMemo(() => {
-    if (!selected) return []
-    return fragrances.filter(f => f.id !== selected.id && f.phase !== selected.phase)
-  }, [fragrances, selected])
-
-  const isHighlighted = (p: LayeringProtocol) => {
-    if (!selected) return false
-    const n = selected.name.toLowerCase()
-    return (
-      p.base_fragrance_name.toLowerCase().includes(n) ||
-      p.top_fragrance_name.toLowerCase().includes(n)
-    )
+  function openPicker(slot: 'slot1' | 'slot2') {
+    setPickerQuery('')
+    setPickerFor(slot)
   }
 
-  function handleSelectFirst(id: string) {
-    const next = selectedId === id ? null : id
-    setSelectedId(next)
-    setSecondId(null)
+  function selectFragrance(f: LayeringFragrance) {
+    if (pickerFor === 'slot1') {
+      setSlot1(f)
+      if (slot2?.id === f.id) setSlot2(null)
+    } else if (pickerFor === 'slot2') {
+      setSlot2(f)
+      if (slot1?.id === f.id) setSlot1(null)
+    }
+    setPickerFor(null)
+    setPickerQuery('')
     setResult(null)
-    setFormulateError(null)
-  }
-
-  function handleSelectSecond(id: string) {
-    const next = secondId === id ? null : id
-    setSecondId(next)
-    setResult(null)
-    setFormulateError(null)
+    setError(null)
   }
 
   async function handleFormulate() {
-    if (!selected || !second) return
+    if (!slot1 || !slot2) return
     setIsLoading(true)
     setResult(null)
-    setFormulateError(null)
+    setError(null)
+    setResultOpen(true)
+
     try {
       const res = await fetch('/api/formulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fragrance1: {
-            name: selected.name, brand: selected.brand, phase: selected.phase,
-            phase_label: selected.phase_label, family: selected.family,
-            projection: selected.projection, application_zone: selected.application_zone,
-            application_method: selected.application_method,
-            anosmia_risk: selected.anosmia_risk, lean: selected.lean,
+            name: slot1.name, brand: slot1.brand, phase: slot1.phase,
+            phase_label: slot1.phase_label, family: slot1.family,
+            projection: slot1.projection, application_zone: slot1.application_zone,
+            application_method: slot1.application_method,
+            anosmia_risk: slot1.anosmia_risk, lean: slot1.lean,
           },
           fragrance2: {
-            name: second.name, brand: second.brand, phase: second.phase,
-            phase_label: second.phase_label, family: second.family,
-            projection: second.projection, application_zone: second.application_zone,
-            application_method: second.application_method,
-            anosmia_risk: second.anosmia_risk, lean: second.lean,
+            name: slot2.name, brand: slot2.brand, phase: slot2.phase,
+            phase_label: slot2.phase_label, family: slot2.family,
+            projection: slot2.projection, application_zone: slot2.application_zone,
+            application_method: slot2.application_method,
+            anosmia_risk: slot2.anosmia_risk, lean: slot2.lean,
           },
-          context,
+          context: {
+            time_of_day: 'morning',
+            weather: 'moderate',
+            occasion: OCCASION_API_MAP[occasion],
+          },
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Request failed')
+      if (!res.ok) throw new Error(data.error ?? 'Formulation failed')
       setResult(data.result)
     } catch (e) {
-      setFormulateError(e instanceof Error ? e.message : 'Something went wrong')
+      setError(e instanceof Error ? e.message : 'Something went wrong')
     } finally {
       setIsLoading(false)
     }
   }
 
+  function handleTryAnother() {
+    setResultOpen(false)
+    setResult(null)
+    setError(null)
+  }
+
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900">
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--text)' }}>
       {/* Header */}
-      <div className="border-b border-stone-200 px-6 py-10">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="editorial-title">Layering Lab</h1>
-          <p className="text-stone-500 text-sm mt-2 font-serif">
-            Pick two fragrances from different phases, then let Scentral formulate the combo.
-          </p>
-        </div>
+      <div className="px-4 pt-8 pb-4" style={{ borderBottom: '1px solid var(--line)' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)', lineHeight: '34px' }}>
+          Lab
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Build a pairing</p>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col gap-16">
+      <div className="px-4 py-6 flex flex-col gap-6">
+        {/* Picker slots */}
+        <div className="flex gap-3">
+          <PickerSlot label="Anchor" fragrance={slot1} onClick={() => openPicker('slot1')} />
+          <PickerSlot label="Top" fragrance={slot2} onClick={() => openPicker('slot2')} />
+        </div>
 
-        {/* Step 1 — pick first fragrance */}
-        <section>
-          <h2 className="editorial-subtitle mb-1">
-            Step 1 — Pick a fragrance
-          </h2>
-          <p className="text-stone-500 text-xs uppercase tracking-widest mb-4">Select one from your collection to start.</p>
+        {/* Occasion chips */}
+        <div className="flex flex-col gap-2">
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Occasion
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {OCCASIONS.map(o => (
+              <Chip key={o} selected={occasion === o} onClick={() => setOccasion(o)}>
+                {o}
+              </Chip>
+            ))}
+          </div>
+        </div>
 
-          <input
-            type="text"
-            placeholder="Search by brand or name…"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            className="w-full max-w-sm bg-white border border-stone-200 text-stone-900 text-sm rounded-sm px-4 py-2.5 mb-6 focus:outline-none focus:ring-1 focus:ring-stone-400 placeholder-stone-300 transition-all"
-          />
+        {/* Formulate button */}
+        <Button
+          fullWidth
+          disabled={!canFormulate}
+          onClick={handleFormulate}
+        >
+          Formulate
+        </Button>
 
-          {displayList.length === 0 ? (
-            <p className="text-stone-400 text-sm italic font-serif">No fragrances match &quot;{query}&quot;.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {displayList.map(f => (
-                <FragrancePickerCard
-                  key={f.id}
-                  f={f}
-                  selected={f.id === selectedId}
-                  onClick={() => handleSelectFirst(f.id)}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+        {!canFormulate && (
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', marginTop: -12 }}>
+            Pick two fragrances to begin
+          </p>
+        )}
+      </div>
 
-        {/* Step 2 — pick pairing */}
-        {selected ? (
-          <section>
-            <h2 className="editorial-subtitle mb-1">
-              Step 2 — Pick a pairing
+      {/* Fragrance picker sheet */}
+      <Sheet open={pickerFor !== null} onClose={() => { setPickerFor(null); setPickerQuery('') }}>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text)' }}>
+              Pick {pickerFor === 'slot1' ? 'Anchor' : 'Top'}
             </h2>
-            <p className="text-stone-500 text-xs uppercase tracking-widest mb-4">
-              <span className="text-stone-900 font-bold">{selected.name}</span> is Phase {selected.phase}.
-              {' '}Showing Phase {selected.phase === 1 ? '2 & 3' : selected.phase === 2 ? '1 & 3' : '1 & 2'} fragrances.
-            </p>
-            {pairings.length === 0 ? (
-              <p className="text-stone-400 text-sm italic font-serif">No other fragrances in collection.</p>
+            <button onClick={() => { setPickerFor(null); setPickerQuery('') }}>
+              <X size={18} strokeWidth={1.75} style={{ color: 'var(--text-muted)' }} />
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search size={14} strokeWidth={1.75} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              placeholder="Search by name or brand…"
+              value={pickerQuery}
+              onChange={e => setPickerQuery(e.target.value)}
+              autoFocus
+              className="w-full pl-9 pr-4 py-2.5 rounded-[var(--r-btn)] text-sm focus:outline-none"
+              style={{
+                background: 'var(--surface-2)',
+                border: '1px solid var(--line)',
+                color: 'var(--text)',
+              }}
+            />
+          </div>
+
+          {/* List */}
+          <div className="flex flex-col" style={{ marginLeft: -16, marginRight: -16 }}>
+            {displayList.length === 0 ? (
+              <p className="px-4 py-4" style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                No fragrances match &quot;{pickerQuery}&quot;.
+              </p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {pairings.map(f => (
-                  <PairingPickerCard
+              displayList.map(f => {
+                const isOtherSlot = pickerFor === 'slot1' ? f.id === slot2?.id : f.id === slot1?.id
+                const isCurrentSlot = pickerFor === 'slot1' ? f.id === slot1?.id : f.id === slot2?.id
+                return (
+                  <FragrancePickerRow
                     key={f.id}
                     f={f}
-                    selected={f.id === secondId}
-                    onClick={() => handleSelectSecond(f.id)}
+                    selected={isCurrentSlot}
+                    disabled={isOtherSlot}
+                    onClick={() => selectFragrance(f)}
                   />
-                ))}
-              </div>
+                )
+              })
             )}
-          </section>
-        ) : (
-          <p className="text-stone-400 text-sm italic font-serif">Select a fragrance above to see compatible pairings.</p>
-        )}
+          </div>
+        </div>
+      </Sheet>
 
-        {/* Step 3 — Formulate */}
-        {selected && second && (
-          <FormulatePanel
-            fragrance1={selected}
-            fragrance2={second}
-            context={context}
-            setContext={setContext}
-            onFormulate={handleFormulate}
-            isLoading={isLoading}
+      {/* Result sheet */}
+      <Sheet open={resultOpen} onClose={() => { if (!isLoading) { setResultOpen(false) } }}>
+        {isLoading ? (
+          <div className="flex flex-col gap-4 py-4">
+            <p style={{ fontSize: 16, color: 'var(--text-muted)' }}>Formulating…</p>
+            <LoadingShimmer variant="line" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col gap-4 py-4">
+            <ErrorInline message={error} onRetry={() => { handleFormulate() }} />
+            <Button variant="secondary" fullWidth onClick={handleTryAnother}>
+              Try another
+            </Button>
+          </div>
+        ) : result ? (
+          /* Prompt 3 will fill in the full result card here */
+          <ResultCard
             result={result}
-            error={formulateError}
+            slot1={slot1}
+            slot2={slot2}
+            onTryAnother={handleTryAnother}
           />
-        )}
+        ) : null}
+      </Sheet>
+    </div>
+  )
+}
 
-        {/* Expert protocols */}
-        <section>
-          <h2 className="editorial-subtitle mb-1">Expert Protocols</h2>
-          {selected && (
-            <p className="text-stone-500 text-xs uppercase tracking-widest mb-4">
-              Protocols featuring <span className="text-[#c49a3c] font-bold">{selected.name}</span> are highlighted.
-            </p>
-          )}
-          {protocols.length === 0 ? (
-            <p className="text-stone-400 text-sm italic font-serif">No protocols found.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {protocols.map(p => (
-                <ProtocolCard key={p.id} protocol={p} highlighted={isHighlighted(p)} />
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-stone-200 px-6 py-12 text-center text-[10px] uppercase tracking-[0.3em] text-stone-400 font-bold space-y-2">
-        <p>Scentral · Personal Fragrance Intelligence</p>
-        <p>
-          <a href="/disclaimer" className="text-stone-400 hover:text-stone-600 transition-colors">
-            For personal use only · Not medical advice · Always patch test · View full disclaimer
-          </a>
-        </p>
-      </div>
+/* Placeholder for Prompt 3 — result card scaffold */
+function ResultCard({
+  result,
+  slot1,
+  slot2,
+  onTryAnother,
+}: {
+  result: FormulateResult
+  slot1: LayeringFragrance | null
+  slot2: LayeringFragrance | null
+  onTryAnother: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-4 py-4">
+      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)' }}>
+        {result.combo_name}
+      </h2>
+      <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{result.claude_note}</p>
+      <Button fullWidth>Save formulation</Button>
+      <Button variant="secondary" fullWidth onClick={onTryAnother}>Try another</Button>
     </div>
   )
 }
