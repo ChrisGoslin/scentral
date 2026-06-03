@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { Search, X, Info, Check } from 'lucide-react'
+import { Search, X, Check } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import Button from '@/components/ui/Button'
@@ -169,7 +169,7 @@ function ResultCard({
     <div className="flex flex-col gap-5 py-4">
       <div>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', lineHeight: '28px' }}>
-          Your formulation
+          Olfactory Synthesis
         </h2>
         {result.occasion_tag && (
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{result.occasion_tag}</p>
@@ -233,12 +233,9 @@ function ResultCard({
         <div style={{ display: 'none' }} aria-hidden="true">{/* Where to buy — post-MVP */}</div>
       )}
 
-      {/* Anosmia warning - subtle */}
+      {/* Anosmia warning */}
       {result.anosmia_warning && (
-        <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-[var(--r-btn)]" style={{ background: 'var(--surface-2)', border: '1px solid var(--line-light)' }}>
-          <Info size={14} style={{ color: 'var(--text-muted)' }} />
-          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{result.anosmia_warning}</p>
-        </div>
+        <ErrorInline message={result.anosmia_warning} color="warning" />
       )}
 
       {/* Save button */}
@@ -374,9 +371,13 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
     setSaveState('idle')
     setResultOpen(true)
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 12000)
+
     try {
       const res = await fetch('/api/formulate', {
         method: 'POST',
+        signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fragrance1: {
@@ -400,11 +401,16 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
           },
         }),
       })
+      clearTimeout(timeoutId)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Formulation failed')
       setResult(data.result)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+      clearTimeout(timeoutId)
+      const msg = e instanceof Error && e.name === 'AbortError'
+        ? 'Took too long — tap retry to try again.'
+        : (e instanceof Error ? e.message : 'Something went wrong')
+      setError(msg)
     } finally {
       setIsLoading(false)
     }
@@ -441,8 +447,8 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
     <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--text)' }}>
       {/* Header */}
       <div className="px-4 pt-8 pb-4" style={{ borderBottom: '1px solid var(--line)' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)', lineHeight: '34px' }}>Lab</h1>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Build a pairing</p>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)', lineHeight: '34px' }}>The Atelier</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Compose a pairing</p>
       </div>
 
       <div className="px-4 py-6 flex flex-col gap-6">
@@ -463,11 +469,11 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
         </div>
 
         {/* Formulate button */}
-        <Button fullWidth disabled={!canFormulate} onClick={handleFormulate}>Formulate</Button>
+        <Button fullWidth disabled={!canFormulate} onClick={handleFormulate}>Synthesize</Button>
 
         {!canFormulate && (
           <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', marginTop: -12 }}>
-            Pick two fragrances to begin
+            Select two essences to begin synthesis
           </p>
         )}
       </div>

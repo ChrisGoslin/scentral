@@ -2,13 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { Archive, FlaskConical, User } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { label: 'Collection', href: '/collection' },
-  { label: 'Lab',        href: '/layering'   },
-  { label: 'Schedule',   href: '/schedule'   },
-  { label: 'You',        href: '/you'         },
+  { label: 'Collection', href: '/collection', Icon: Archive },
+  { label: 'Lab',        href: '/layering',   Icon: FlaskConical },
+  { label: 'You',        href: '/you',        Icon: User },
 ]
 
 export default function BottomNav() {
@@ -23,15 +22,26 @@ export default function BottomNav() {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      <div className="mx-auto grid h-14 max-w-md items-center gap-1" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-        {NAV_ITEMS.map(item => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+      <div
+        className="mx-auto grid h-14 max-w-md items-center"
+        style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}
+      >
+        {NAV_ITEMS.map(({ label, href, Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(`${href}/`)
           return (
             <Link
-              key={item.href}
-              href={item.href}
-              className="flex flex-col items-center justify-center gap-1 py-1 min-h-[44px]"
+              key={href}
+              href={href}
+              className="flex flex-col items-center justify-center gap-0.5 py-1 min-h-[44px]"
+              aria-current={isActive ? 'page' : undefined}
             >
+              <Icon
+                size={22}
+                strokeWidth={1.75}
+                fill={isActive ? 'var(--accent)' : 'none'}
+                color={isActive ? 'var(--accent)' : 'var(--text-muted)'}
+                style={{ transition: `color var(--motion-fast), fill var(--motion-fast)` }}
+              />
               <span
                 style={{
                   fontSize: 10,
@@ -42,15 +52,8 @@ export default function BottomNav() {
                   transition: `color var(--motion-fast)`,
                 }}
               >
-                {item.label}
+                {label}
               </span>
-              {isActive && (
-                <motion.div
-                  layoutId="nav-underline"
-                  className="rounded-full"
-                  style={{ height: 2, width: 16, background: 'var(--accent)' }}
-                />
-              )}
             </Link>
           )
         })}
