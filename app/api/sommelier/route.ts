@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       ${memoryBlock}
       
       Available Wardrobe:
-      ${wardrobe.map((f: any) => `- ${f.brand} ${f.name} (Family: ${f.primary_vector}) [Notes: ${f.notes}]`).join('\n')}
+      ${wardrobe.map((f: any) => `- ${f.brand} ${f.name} (Family: ${f.family ?? f.primary_vector}) [Notes: ${f.notes}]`).join('\n')}
       
       Construct the protocol.
     `;

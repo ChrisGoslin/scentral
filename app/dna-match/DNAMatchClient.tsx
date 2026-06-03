@@ -7,7 +7,7 @@ interface Fragrance {
   id: string;
   brand: string;
   name: string;
-  primary_vector: string;
+  family: string;
   image_url?: string | null;
 }
 
