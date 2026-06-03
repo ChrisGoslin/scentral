@@ -121,10 +121,10 @@ export default function CollectionClient({ fragrances }: { fragrances: Collectio
       {/* Header */}
       <div className="px-4 pt-8 pb-4" style={{ borderBottom: '1px solid var(--line)' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)', lineHeight: '34px' }}>
-          Collection
+          The Wardrobe
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-          {total} in your shelf
+          {total} essences discovered
         </p>
       </div>
 
@@ -147,8 +147,8 @@ export default function CollectionClient({ fragrances }: { fragrances: Collectio
       <div className="px-4 py-5">
         {filtered.length === 0 ? (
           <EmptyState
-            headline="No fragrances yet"
-            caption="Your collection will appear here once fragrances are added."
+            headline="Your wardrobe is empty"
+            caption="The sanctuary is awaiting its first essence. Begin your collection to explore olfactory resonance."
           />
         ) : (
           <div className="grid grid-cols-2 gap-3">

@@ -82,14 +82,14 @@ export default function AccordCreator() {
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] p-6 pt-24">
       <div className="max-w-6xl mx-auto">
         <div className="mb-12">
-          <h1 className="text-5xl font-serif italic mb-3 tracking-tight">Accord Creator</h1>
-          <p className="text-[var(--text-muted)] text-lg font-light">Build and discover fragrance layering combos</p>
+          <h1 className="text-5xl font-serif italic mb-3 tracking-tight">The Atelier</h1>
+          <p className="text-[var(--text-muted)] text-lg font-light">Build and discover olfactory resonance</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-serif">Layer Your Bottles</h2>
+              <h2 className="text-2xl font-serif">Synthesize Your Wardrobe</h2>
               <button
                 onClick={loadPreset}
                 className="px-6 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-press)] text-white rounded-[var(--r-btn)] text-[10px] font-bold tracking-widest uppercase transition shadow-sm"
@@ -149,7 +149,7 @@ function FragranceSlot({
 
   return (
     <div className="relative">
-      <div className="bg-white border border-[var(--line)] rounded-[var(--r-card)] p-6 shadow-sm transition-all hover:shadow-md">
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[var(--r-card)] p-6 shadow-sm transition-all hover:shadow-md">
         <div className="flex justify-between items-center mb-4">
           <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Layer {index + 1}</span>
           {selected && (
@@ -192,7 +192,7 @@ function FragranceSlot({
       </div>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[var(--line)] rounded-[var(--r-card)] overflow-hidden z-50 shadow-2xl">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--surface)] border border-[var(--line)] rounded-[var(--r-card)] overflow-hidden z-50 shadow-2xl">
           <div className="max-h-64 overflow-y-auto">
             {availableFragrances.map(frag => (
               <button
@@ -237,7 +237,7 @@ function ScoreCard({
   };
 
   return (
-    <div className="sticky top-24 bg-white border border-[var(--line)] rounded-[var(--r-card)] p-8 shadow-sm space-y-8">
+    <div className="sticky top-24 bg-[var(--surface)] border border-[var(--line)] rounded-[var(--r-card)] p-8 shadow-sm space-y-8">
       <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Resonance Score</h3>
 
       {fragranceCount >= 2 ? (
@@ -329,7 +329,7 @@ function NotesDisplay({
             : breakdown.baseMatchPct;
 
         return (
-          <div key={level} className="bg-white border border-[var(--line)] rounded-[var(--r-card)] p-6 shadow-sm">
+          <div key={level} className="bg-[var(--surface)] border border-[var(--line)] rounded-[var(--r-card)] p-6 shadow-sm">
             <h3 className="text-[10px] uppercase tracking-widest text-[var(--accent)] font-bold mb-4">{level} Harmony</h3>
             <div className="space-y-4">
               {active.map((frag, idx) => (

@@ -110,8 +110,8 @@ export default function ScheduleClient({ fragrances, savedSchedules: initialSave
     <div style={{ background: 'var(--bg)', minHeight: '100vh', paddingBottom: 100 }}>
       {/* Header */}
       <div className="px-4 pt-8 pb-4 border-b border-[var(--line)]">
-        <h1 className="text-[28px] leading-tight font-serif italic text-[var(--text)]">Schedule</h1>
-        <p className="text-[13px] text-[var(--text-muted)]">Plan your day's fragrance.</p>
+        <h1 className="text-[28px] leading-tight font-serif italic text-[var(--text)]">The Ritual</h1>
+        <p className="text-[13px] text-[var(--text-muted)]">Compose your daily fragrance sequence.</p>
       </div>
 
       <div className="px-4 py-6 flex flex-col gap-4">
@@ -144,14 +144,14 @@ export default function ScheduleClient({ fragrances, savedSchedules: initialSave
           >
             {lastSavedId ? (
               <span className="flex items-center gap-2">
-                <Check size={16} /> Saved!
+                <Check size={16} /> Preserved!
               </span>
-            ) : 'Save this schedule'}
+            ) : 'Preserve this ritual'}
           </Button>
           
           {!isSignedIn && (
             <p className="text-center text-[11px] text-[var(--text-muted)] font-bold uppercase tracking-widest">
-              Sign in to save your daily plan
+              Sign in to preserve your rituals
             </p>
           )}
         </div>
@@ -159,9 +159,9 @@ export default function ScheduleClient({ fragrances, savedSchedules: initialSave
         {/* Saved Schedules */}
         {isSignedIn && (
           <div className="mt-8 pt-8 border-t border-[var(--line)]">
-            <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-[var(--text-muted)] mb-6">Saved schedules</p>
+            <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-[var(--text-muted)] mb-6">Preserved rituals</p>
             {savedSchedules.length === 0 ? (
-              <EmptyState headline="No saved schedules yet." />
+              <EmptyState headline="No preserved rituals yet." />
             ) : (
               <div className="flex flex-col gap-4">
                 {savedSchedules.map(s => (

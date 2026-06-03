@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Archive, FlaskConical, User } from 'lucide-react'
+import { Archive, FlaskConical, Calendar, User } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { label: 'Collection', href: '/collection', Icon: Archive },
-  { label: 'Lab',        href: '/layering',   Icon: FlaskConical },
-  { label: 'You',        href: '/you',        Icon: User },
+  { label: 'The Wardrobe', href: '/collection', Icon: Archive },
+  { label: 'The Atelier', href: '/layering',   Icon: FlaskConical },
+  { label: 'The Ritual',   href: '/schedule',   Icon: Calendar },
+  { label: 'The You',      href: '/you',        Icon: User },
 ]
 
 export default function BottomNav() {
@@ -24,7 +25,7 @@ export default function BottomNav() {
     >
       <div
         className="mx-auto grid h-14 max-w-md items-center"
-        style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}
+        style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}
       >
         {NAV_ITEMS.map(({ label, href, Icon }) => {
           const isActive = pathname === href || pathname.startsWith(`${href}/`)
@@ -44,12 +45,13 @@ export default function BottomNav() {
               />
               <span
                 style={{
-                  fontSize: 10,
+                  fontSize: 8,
                   textTransform: 'uppercase',
-                  letterSpacing: '0.12em',
+                  letterSpacing: '0.08em',
                   fontWeight: 700,
                   color: isActive ? 'var(--accent)' : 'var(--text-muted)',
                   transition: `color var(--motion-fast)`,
+                  textAlign: 'center',
                 }}
               >
                 {label}
