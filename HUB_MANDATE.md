@@ -1,16 +1,16 @@
 # Scentral Hub: Engineering Mandate
 
 ## 🧪 AI-Personalized Fragrance OS
-- This project must adhere to high-velocity deployment standards.
+- This project must adhere to high-velocity deployment standards via Vercel.
 - **Mandatory Logic:** Predictive Scent Engine (Weather/Geo-Context).
-- All changes must pass the Shadow Deployment audit.
+- **Core Technology:** 3072-dimensional pgvector resonance engine.
 
 ## 🛠️ Technology Stack
-- **Frontend:** Next.js (App Router), Tailwind CSS.
+- **Frontend:** Next.js 16 (App Router), Tailwind CSS.
 - **Personalization:** Demo Telemetry Overlay (Edge Middleware).
-- **Deployment:** `npm run deploy` (Audited pre-flight).
+- **Hardening:** `npm run sanity-check` (Next.js 16 debt verification).
 
 ## 🏗️ Architectural Guardrails
-- **Metadata Integrity:** Mandatory `bin/optimize-meta` gate.
+- **Metadata Integrity:** `bin/optimize-meta` gate for autonomous pruning.
 - **Build Sovereignty:** No cross-pollination with Household Finance logic.
-- **Shadow Branching:** All autonomous edits must be mirrored to `autopilot-shadow`.
+- **Verification Mandate:** All claims must be backed by pasted CLI evidence.

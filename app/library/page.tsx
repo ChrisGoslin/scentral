@@ -11,8 +11,6 @@ import type { Fragrance } from '@/lib/types';
 import AudioChord from '../components/AudioChord';
 import TheExhibition from '../components/TheExhibition';
 
-const supabase = createClient();
-
 const STAR_LABELS: Record<number, string> = {
   1: 'Weak Presence',
   2: 'Fair Resonance',
@@ -22,6 +20,7 @@ const STAR_LABELS: Record<number, string> = {
 };
 
 export default function WardrobePage() {
+  const supabase = createClient();
   // ── Auth state ─────────────────────────────────────────────────────────────
   const [authLoading, setAuthLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);

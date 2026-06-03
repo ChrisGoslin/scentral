@@ -1,133 +1,120 @@
 'use client'
 
 import React from 'react'
+import { Info } from 'lucide-react'
 
 /**
  * SensoryAnatomy — minimal body silhouette showing fragrance application zones.
- * `zone` is a comma-separated string from the fragrances table, e.g. "wrist, neck" or "pulse points".
+ * Displays descriptive facts and percentage-based coordinates for hotspots.
  */
 
-type Zone = {
+type SpritzZone = {
   id: string
   label: string
-  // position on the SVG canvas (cx, cy as % of 80×200 viewBox)
-  cx: number
-  cy: number
+  fact: string
+  coordinates: { x: number; y: number } // Percentage based
 }
 
-const KNOWN_ZONES: Zone[] = [
-  { id: 'neck',         label: 'Neck',         cx: 40, cy: 38  },
-  { id: 'chest',        label: 'Chest',        cx: 40, cy: 68  },
-  { id: 'wrist',        label: 'Wrists',       cx: 14, cy: 108 },
-  { id: 'elbow',        label: 'Inner elbow',  cx: 16, cy: 90  },
-  { id: 'behind ears',  label: 'Behind ears',  cx: 28, cy: 28  },
-  { id: 'pulse points', label: 'Pulse points', cx: 40, cy: 108 },
-  { id: 'hair',         label: 'Hair',         cx: 40, cy: 12  },
-  { id: 'behind knee',  label: 'Knees',        cx: 40, cy: 158 },
-  { id: 'ankle',        label: 'Ankles',       cx: 40, cy: 180 },
-]
-
-function matchZones(zone: string): Zone[] {
-  const parts = zone.toLowerCase().split(/[,/]+/).map(s => s.trim()).filter(Boolean)
-  const matched: Zone[] = []
-  for (const part of parts) {
-    const z = KNOWN_ZONES.find(z => z.id === part || part.includes(z.id) || z.id.includes(part))
-    if (z && !matched.find(m => m.id === z.id)) matched.push(z)
+const ZONES: Record<string, SpritzZone> = {
+  'neck': {
+    id: 'neck',
+    label: 'Neck',
+    fact: 'Pulse points here provide high projection.',
+    coordinates: { x: 50, y: 25 }
+  },
+  'wrists': {
+    id: 'wrists',
+    label: 'Wrists',
+    fact: 'Classic spot, but avoid rubbing them together!',
+    coordinates: { x: 30, y: 60 }
+  },
+  'chest': {
+    id: 'chest',
+    label: 'Chest',
+    fact: 'Creates a scent cloud that rises to your nose.',
+    coordinates: { x: 50, y: 40 }
+  },
+  'behind-ears': {
+    id: 'behind-ears',
+    label: 'Behind Ears',
+    fact: 'Great for intimacy and "scent trails".',
+    coordinates: { x: 55, y: 20 }
+  },
+  'inner-elbows': {
+    id: 'inner-elbows',
+    label: 'Inner Elbows',
+    fact: 'Warm area that helps scent last longer.',
+    coordinates: { x: 25, y: 50 }
+  },
+  'lower-torso': {
+    id: 'lower-torso',
+    label: 'Lower Torso',
+    fact: 'Ideal for heavier molecules to rise slowly.',
+    coordinates: { x: 50, y: 70 }
   }
-  // Fallback: if nothing matched, default to neck + wrist
-  if (matched.length === 0) {
-    const fallback = KNOWN_ZONES.filter(z => z.id === 'neck' || z.id === 'wrist')
-    return fallback
-  }
-  return matched
 }
 
 interface SensoryAnatomyProps {
-  zone: string | null | undefined
+  zone?: string | null
+  className?: string
 }
 
-export default function SensoryAnatomy({ zone }: SensoryAnatomyProps) {
-  if (!zone) return null
-
-  const activeZones = matchZones(zone)
+export default function SensoryAnatomy({ zone, className }: SensoryAnatomyProps) {
+  // Map incoming zone string to our coordinates system
+  const normalizedZone = zone?.toLowerCase().replace(/\s+/g, '-') || ''
+  
+  // Find match or default to neck
+  let activeZone = ZONES[normalizedZone]
+  
+  if (!activeZone) {
+    if (normalizedZone.includes('neck')) activeZone = ZONES['neck']
+    else if (normalizedZone.includes('wrist')) activeZone = ZONES['wrists']
+    else if (normalizedZone.includes('chest')) activeZone = ZONES['chest']
+    else if (normalizedZone.includes('ear')) activeZone = ZONES['behind-ears']
+    else if (normalizedZone.includes('elbow')) activeZone = ZONES['inner-elbows']
+    else if (normalizedZone.includes('torso')) activeZone = ZONES['lower-torso']
+    else activeZone = ZONES['neck']
+  }
 
   return (
-    <div
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line)',
-        borderRadius: 'var(--r-card)',
-        padding: '14px 16px',
-        display: 'flex',
-        gap: 16,
-        alignItems: 'flex-start',
-      }}
+    <div 
+      className={`flex flex-col gap-4 p-4 rounded-[var(--r-card)] ${className || ''}`} 
+      style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
     >
-      {/* Body SVG */}
-      <svg
-        viewBox="0 0 80 200"
-        width={48}
-        height={120}
-        aria-hidden="true"
-        style={{ flexShrink: 0 }}
-      >
-        {/* Minimal body silhouette */}
-        {/* Head */}
-        <ellipse cx="40" cy="16" rx="11" ry="13" fill="none" stroke="var(--line)" strokeWidth="1.5" />
-        {/* Neck */}
-        <rect x="36" y="28" width="8" height="8" rx="1" fill="none" stroke="var(--line)" strokeWidth="1.5" />
-        {/* Torso */}
-        <path d="M24 36 Q16 44 14 80 Q14 100 22 104 L58 104 Q66 100 66 80 Q64 44 56 36 Z"
-          fill="none" stroke="var(--line)" strokeWidth="1.5" />
-        {/* Left arm */}
-        <path d="M24 40 Q10 60 10 90 Q10 100 14 104" fill="none" stroke="var(--line)" strokeWidth="1.5" />
-        {/* Right arm */}
-        <path d="M56 40 Q70 60 70 90 Q70 100 66 104" fill="none" stroke="var(--line)" strokeWidth="1.5" />
-        {/* Left wrist/hand */}
-        <ellipse cx="13" cy="108" rx="4" ry="5" fill="none" stroke="var(--line)" strokeWidth="1.5" />
-        {/* Right wrist/hand */}
-        <ellipse cx="67" cy="108" rx="4" ry="5" fill="none" stroke="var(--line)" strokeWidth="1.5" />
-        {/* Left leg */}
-        <path d="M30 104 Q26 140 26 160 Q26 176 30 184" fill="none" stroke="var(--line)" strokeWidth="1.5" />
-        {/* Right leg */}
-        <path d="M50 104 Q54 140 54 160 Q54 176 50 184" fill="none" stroke="var(--line)" strokeWidth="1.5" />
-
-        {/* Active zone dots */}
-        {activeZones.map(z => (
-          <g key={z.id}>
-            <circle cx={z.cx} cy={z.cy} r="5" fill="var(--accent)" opacity="0.9" />
-            <circle cx={z.cx} cy={z.cy} r="7" fill="var(--accent)" opacity="0.2" />
-          </g>
-        ))}
-      </svg>
-
-      {/* Zone labels */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 2 }}>
-        <p style={{
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: '0.1em', color: 'var(--text-muted)', margin: 0,
-        }}>
-          Application zones
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {activeZones.map(z => (
-            <span
-              key={z.id}
-              style={{
-                fontSize: 12, fontWeight: 500,
-                background: 'var(--surface-2)', border: '1px solid var(--accent)',
-                color: 'var(--accent)',
-                borderRadius: 'var(--r-chip)',
-                padding: '3px 10px',
-              }}
-            >
-              {z.label}
-            </span>
-          ))}
+      <div className="flex items-center gap-4">
+        <div 
+          className="relative w-20 h-28 bg-[var(--surface-2)] rounded-full overflow-hidden flex-shrink-0 border border-[var(--line)]"
+        >
+          {/* Simple abstract human silhouette representation */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-[var(--text-muted)] opacity-20" />
+          <div className="absolute top-9 left-1/2 -translate-x-1/2 w-12 h-18 rounded-t-full bg-[var(--text-muted)] opacity-20" />
+          
+          {/* Active zone indicator */}
+          <div 
+            className="absolute w-2.5 h-2.5 rounded-full bg-[var(--accent)] animate-pulse"
+            style={{ 
+              left: `${activeZone.coordinates.x}%`, 
+              top: `${activeZone.coordinates.y}%`,
+              boxShadow: '0 0 8px var(--accent)',
+              transform: 'translate(-50%, -50%)'
+            }}
+          />
         </div>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, lineHeight: '16px' }}>
-          {zone}
-        </p>
+        
+        <div className="flex flex-col gap-1 min-w-0">
+          <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-widest">
+            Application Zone
+          </p>
+          <p className="text-sm text-[var(--text)] font-semibold truncate">
+            {activeZone.label}
+          </p>
+          <div className="flex items-start gap-1.5 mt-1">
+            <Info size={12} className="text-[var(--accent)] mt-0.5 flex-shrink-0" />
+            <p className="text-[11px] text-[var(--text-muted)] leading-tight italic">
+              {activeZone.fact}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
