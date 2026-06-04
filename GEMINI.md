@@ -7,19 +7,19 @@
 
 ## 🧪 AI-Personalized Logic
 - **Predictive Scent Engine:** Weather/Geo-Context integration is a core roadmap item.
-- **DNA Match:** Cross-referencing scents based on accords and concentration (Migrated from Community).
+- **DNA Match:** Cross-referencing scents based on 3072-dimensional pgvector embeddings (gemini-embedding-001).
 - **Accord Creator:** Lead-gen and creative entry point (Migrated from Hub-v1).
 
 ## 🛠️ Technology Stack
 - **Frontend:** Next.js 16 (App Router), Tailwind CSS 4.
 - **Backend:** Supabase (Project: lrkdwobnemczvhpixpky).
 - **Interactions:** Web Audio API, Canvas Generative Art.
-- **Deployment:** `npm run deploy` (Audited pre-flight via `bin/deploy`).
+- **Verification:** `npm run sanity-check` (Architectural and Schema gate).
 
 ## 🏗️ Architectural Guardrails
 - **Strict Siloing:** 100% build and data isolation from Household Finance.
-- **Metadata Integrity:** Mandatory `bin/optimize-meta` gate before merge to main.
-- **Shadow Branching:** All autonomous edits must be mirrored to `autopilot-shadow`.
+- **Metadata Integrity:** `bin/optimize-meta` available for metadata pruning.
+- **Empirical Mandate:** No feature marked "Done" without pasted CLI evidence of success.
 
 ## 👸 Sovereign Focus Group: Agent Luna
 - **Mandate:** All UI/UX changes must pass the `AGENT_LUNA.md` Prestige Audit.

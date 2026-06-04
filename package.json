@@ -6,14 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sanity-check": "node scripts/sanity-check.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
     "@google/genai": "^2.7.0",
     "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.10.3",
-    "@supabase/supabase-js": "^2.106.2",
+    "@supabase/supabase-js": "^2.107.0",
     "@upstash/ratelimit": "^1.1.0",
     "@upstash/redis": "^1.28.4",
     "cheerio": "^1.2.0",

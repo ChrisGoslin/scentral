@@ -1,15 +1,14 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/utils/supabase/server'
 import CollectionClient, { type CollectionFragrance } from './CollectionClient'
 import EmptyState from '@/components/ui/EmptyState'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CollectionPage() {
+  const cookieStore = await cookies()
+  const supabase = await createClient(cookieStore)
+  
   const { data, error } = await supabase
     .from('fragrances')
     .select('id, brand, name, phase, phase_label, family, projection, anosmia_risk, lean, rating, image_url')

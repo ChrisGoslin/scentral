@@ -1,14 +1,10 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Info } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import SensoryAnatomy from '@/components/ui/SensoryAnatomy'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { cookies } from 'next/headers'
 
 const PHASE_LABEL: Record<number, string> = {
   1: 'Anchor',
@@ -18,6 +14,8 @@ const PHASE_LABEL: Record<number, string> = {
 
 export default async function FragranceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const cookieStore = await cookies()
+  const supabase = await createClient(cookieStore)
 
   const { data, error } = await supabase
     .from('fragrances')

@@ -85,6 +85,7 @@ export default function ScheduleClient({ fragrances, savedSchedules: initialSave
       midday: s.midday_sprays ?? 2,
       evening: s.evening_sprays ?? 2
     })
+    setLastSavedId(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -122,7 +123,10 @@ export default function ScheduleClient({ fragrances, savedSchedules: initialSave
             selected={slots[config.key]}
             sprays={sprays[config.key]}
             onTap={() => setActiveSlot(config.key)}
-            onSpraysChange={(n) => setSprays(prev => ({ ...prev, [config.key]: n }))}
+            onSpraysChange={(n) => {
+              setSprays(prev => ({ ...prev, [config.key]: n }))
+              setLastSavedId(null)
+            }}
           />
         ))}
 
