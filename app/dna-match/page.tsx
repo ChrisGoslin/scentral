@@ -8,7 +8,7 @@ async function loadFragrances() {
 
   const { data: fragrances, error } = await supabase
     .from('fragrances')
-    .select('id, brand, name, primary_vector, image_url')
+    .select('id, brand, name, family, image_url')
     .order('brand')
     .order('name');
 
