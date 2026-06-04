@@ -371,13 +371,9 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
     setSaveState('idle')
     setResultOpen(true)
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 12000)
-
     try {
       const res = await fetch('/api/formulate', {
         method: 'POST',
-        signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fragrance1: {
@@ -401,15 +397,11 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
           },
         }),
       })
-      clearTimeout(timeoutId)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Formulation failed')
       setResult(data.result)
     } catch (e) {
-      clearTimeout(timeoutId)
-      const msg = e instanceof Error && e.name === 'AbortError'
-        ? 'Took too long — tap retry to try again.'
-        : (e instanceof Error ? e.message : 'Something went wrong')
+      const msg = e instanceof Error ? e.message : 'Something went wrong'
       setError(msg)
     } finally {
       setIsLoading(false)
