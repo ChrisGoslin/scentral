@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
+import { createClient } from '@/utils/supabase/server';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -18,13 +19,29 @@ Your tone is "Milan Scents"—highly evocative, cinematic, and technical.
 
 export async function POST(req: Request) {
   try {
-    const { fragrance_a, fragrance_b } = await req.json();
+    const { fragrance_a_id, fragrance_b_id } = await req.json();
+    if (!fragrance_a_id || !fragrance_b_id) {
+      return NextResponse.json({ error: 'Both fragrance IDs are required.' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+    const { data: fragrances, error } = await supabase
+      .from('fragrances')
+      .select('id, brand, name, family, notes, concentration')
+      .in('id', [fragrance_a_id, fragrance_b_id]);
+
+    if (error || !fragrances || fragrances.length < 2) {
+      return NextResponse.json({ error: 'Failed to load fragrance data.' }, { status: 500 });
+    }
+
+    const fragA = fragrances.find((f) => f.id === fragrance_a_id)!;
+    const fragB = fragrances.find((f) => f.id === fragrance_b_id)!;
 
     const prompt = `
       Compare these two essences:
-      Essence Alpha: ${fragrance_a.brand} ${fragrance_a.name} (${fragrance_a.primary_vector}) [Notes: ${fragrance_a.notes}]
-      Essence Beta: ${fragrance_b.brand} ${fragrance_b.name} (${fragrance_b.primary_vector}) [Notes: ${fragrance_b.notes}]
-      
+      Essence Alpha: ${fragA.brand} ${fragA.name} (${fragA.family}) [Concentration: ${fragA.concentration ?? 'Unknown'}] [Notes: ${fragA.notes ?? 'Unknown'}]
+      Essence Beta: ${fragB.brand} ${fragB.name} (${fragB.family}) [Concentration: ${fragB.concentration ?? 'Unknown'}] [Notes: ${fragB.notes ?? 'Unknown'}]
+
       Determine the resonance.
     `;
 
@@ -47,7 +64,7 @@ export async function POST(req: Request) {
     });
 
     const resultText = response.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!resultText) throw new Error("Synthesis failed");
+    if (!resultText) throw new Error('Synthesis failed');
 
     return NextResponse.json({ ...JSON.parse(resultText), success: true });
   } catch (error: any) {
