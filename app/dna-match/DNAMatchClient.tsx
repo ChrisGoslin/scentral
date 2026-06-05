@@ -7,7 +7,6 @@ interface Fragrance {
   id: string;
   brand: string;
   name: string;
-  primary_vector: string;
   image_url?: string | null;
 }
 
@@ -18,17 +17,6 @@ interface DNAMatchResult {
   narrative: string;
   cached: boolean;
 }
-
-const PALETTE = {
-  bg: '#fafaf9', // Stone-50
-  bgSecondary: '#f5f5f4', // Stone-100
-  accent: '#c49a3c', // Fragrance Gold
-  accentGreen: '#16a34a',
-  accentBlue: '#2563eb',
-  text: '#1c1917', // Stone-900
-  textMuted: '#78716c', // Stone-500
-  border: '#e7e5e4', // Stone-200
-};
 
 export default function ResonanceClient({ fragrances }: { fragrances: Fragrance[] }) {
   const [fragA, setFragA] = useState<Fragrance | null>(null);
@@ -89,21 +77,19 @@ export default function ResonanceClient({ fragrances }: { fragrances: Fragrance[
 
   const categoryColor = result
     ? result.category.includes('Twin')
-      ? PALETTE.accentGreen
+      ? '#16a34a'
       : result.category.includes('Strategic')
-        ? PALETTE.accent
+        ? 'var(--accent)'
         : result.category.includes('Homage')
-          ? PALETTE.accentBlue
-          : result.category.includes('Cousin')
-            ? PALETTE.textMuted
-            : PALETTE.textMuted
-    : PALETTE.accent;
+          ? '#2563eb'
+          : 'var(--text-muted)'
+    : 'var(--accent)';
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-16 space-y-12">
       <header className="space-y-2">
-        <h1 className="text-5xl font-serif italic text-stone-900 tracking-tight">Olfactory Resonance</h1>
-        <p className="text-stone-500 text-lg">Synthesize the chemical harmony between two essences.</p>
+        <h1 className="text-5xl font-serif italic tracking-tight" style={{ color: 'var(--text)' }}>Olfactory Resonance</h1>
+        <p className="text-lg" style={{ color: 'var(--text-muted)' }}>Synthesize the chemical harmony between two essences.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -140,8 +126,15 @@ export default function ResonanceClient({ fragrances }: { fragrances: Fragrance[
         </button>
       </div>
 
-      {result && (
-        <div className="fade-up bg-white border border-stone-200 rounded-3xl p-10 shadow-sm text-center space-y-8">
+      {loading && (
+        <div className="space-y-4 animate-pulse">
+          <div className="h-40 rounded-3xl" style={{ background: 'var(--surface)' }} />
+          <div className="h-6 w-1/3 mx-auto rounded" style={{ background: 'var(--surface)' }} />
+        </div>
+      )}
+
+      {result && !loading && (
+        <div className="fade-up border rounded-3xl p-10 shadow-sm text-center space-y-8" style={{ background: 'var(--surface)', borderColor: 'var(--line)' }}>
           <ScoreRing score={result.score} />
 
           <div className="space-y-4">
@@ -151,24 +144,25 @@ export default function ResonanceClient({ fragrances }: { fragrances: Fragrance[
             >
               {result.category}
             </div>
-            
+
             <div className="max-w-xl mx-auto">
-              <button 
+              <button
                 onClick={() => setExpanded(!expanded)}
-                className="text-[#c49a3c] hover:text-[#a07d30] transition text-sm font-medium"
+                className="transition text-sm font-medium"
+                style={{ color: 'var(--accent)' }}
               >
                 {expanded ? 'Hide Editorial Note ▲' : 'Read Editorial Note ▼'}
               </button>
-              
+
               {expanded && (
-                <div className="mt-6 p-6 bg-stone-50 rounded-2xl text-stone-700 italic leading-relaxed border border-stone-100">
+                <div className="mt-6 p-6 rounded-2xl italic leading-relaxed border" style={{ background: 'var(--bg)', color: 'var(--text-muted)', borderColor: 'var(--line)' }}>
                   {result.narrative}
                 </div>
               )}
             </div>
           </div>
 
-          {result.cached && <div className="text-[10px] text-stone-400 font-mono tracking-widest uppercase">🔄 Retrieved from Archives</div>}
+          {result.cached && <div className="text-[10px] font-mono tracking-widest uppercase" style={{ color: 'var(--text-muted)' }}>🔄 Retrieved from Archives</div>}
         </div>
       )}
 
@@ -205,47 +199,37 @@ function FragrancePicker({
           type="text"
           placeholder="Search essences..."
           value={search}
-          onChange={(e) => {
-            onSearchChange(e.target.value);
-            setOpen(true);
-          }}
+          onChange={(e) => { onSearchChange(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          className="w-full bg-white border border-stone-200 rounded-xl px-4 py-4 focus:outline-none focus:border-[#c49a3c]/50 transition text-stone-900 placeholder-stone-300 shadow-sm"
+          className="w-full rounded-xl px-4 py-4 focus:outline-none transition shadow-sm"
+          style={{ background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--text)' }}
         />
       ) : (
-        <div className="flex items-center gap-4 bg-white border border-[#c49a3c]/30 rounded-2xl p-4 shadow-sm group">
+        <div className="flex items-center gap-4 rounded-2xl p-4 shadow-sm group" style={{ background: 'var(--surface)', border: '1px solid var(--accent)' }}>
           {selected.image_url && (
             <img src={selected.image_url} alt="" className="w-12 h-12 object-contain rounded-lg" />
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-stone-400 text-[10px] uppercase font-bold tracking-widest">{selected.brand}</p>
-            <p className="text-stone-900 font-semibold truncate">{selected.name}</p>
+            <p className="text-[10px] uppercase font-bold tracking-widest" style={{ color: 'var(--text-muted)' }}>{selected.brand}</p>
+            <p className="font-semibold truncate" style={{ color: 'var(--text)' }}>{selected.name}</p>
           </div>
-          <button 
-            onClick={() => onSelect(null)} 
-            className="text-stone-300 hover:text-red-400 transition text-xl"
-          >
-            ×
-          </button>
+          <button onClick={() => onSelect(null)} className="text-xl transition hover:opacity-60" style={{ color: 'var(--text-muted)' }}>×</button>
         </div>
       )}
 
       {open && !selected && filtered.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-stone-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-xl z-50 overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
           {filtered.slice(0, 8).map((f) => (
             <div
               key={f.id}
-              onClick={() => {
-                onSelect(f);
-                onSearchChange('');
-                setOpen(false);
-              }}
-              className="px-5 py-4 cursor-pointer hover:bg-stone-50 border-b border-stone-100 last:border-0 transition flex items-center gap-4"
+              onClick={() => { onSelect(f); onSearchChange(''); setOpen(false); }}
+              className="px-5 py-4 cursor-pointer transition flex items-center gap-4"
+              style={{ borderBottom: '1px solid var(--line)' }}
             >
               {f.image_url && <img src={f.image_url} alt="" className="w-8 h-8 object-contain opacity-70" />}
               <div className="flex-1 min-w-0">
-                <p className="text-stone-400 text-[10px] uppercase font-bold">{f.brand}</p>
-                <p className="text-stone-900 text-sm truncate">{f.name}</p>
+                <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-muted)' }}>{f.brand}</p>
+                <p className="text-sm truncate" style={{ color: 'var(--text)' }}>{f.name}</p>
               </div>
             </div>
           ))}
@@ -283,8 +267,8 @@ function ScoreRing({ score }: { score: number }) {
         </defs>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center space-y-0">
-        <span className="text-4xl font-bold text-stone-900 tracking-tighter">{score}</span>
-        <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold">Harmony</span>
+        <span className="text-4xl font-bold tracking-tighter" style={{ color: 'var(--text)' }}>{score}</span>
+        <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--text-muted)' }}>Harmony</span>
       </div>
     </div>
   );

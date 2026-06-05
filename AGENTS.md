@@ -10,6 +10,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 **Owner:** Christopher. **Purpose:** prevent invented facts, paths, keys, and scope.
 This is the SINGLE canonical instructions file. `CLAUDE.md` and `GEMINI.md` point here. Read this FIRST, every session, before acting. Begin your first reply by stating in one line what you grounded yourself in.
+**Supplementary reading:** `skills/grounded-agent-guardrails/SKILL.md` — expands the five safeguards with verification commands, known fabrications list, and a session-start checklist.
 
 ## 0. Why this file exists
 Prior agent runs produced confident "breakthrough" output full of fabricated detail (fake repo paths,

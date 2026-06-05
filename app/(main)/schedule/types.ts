@@ -10,6 +10,7 @@ export type ScheduleFragrance = {
   spritz_count: number | null
   application_zone: string | null
   lean: string | null
+  wear_count?: number
 }
 
 export type SlotKey = 'morning' | 'midday' | 'evening'

@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { Search, ShieldAlert, Check } from 'lucide-react'
+import { Search, Check, Sparkles } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import { SLOTS, type SlotKey, type SlotConfig, type ScheduleFragrance, type SavedSchedule } from './types'
 import SlotCard, { PhaseChip } from './SlotCard'
 import Sheet from '@/components/ui/Sheet'
@@ -20,6 +21,10 @@ interface ScheduleClientProps {
 export type { ScheduleFragrance, SavedSchedule } from './types'
 
 export default function ScheduleClient({ fragrances, savedSchedules: initialSavedSchedules, isSignedIn }: ScheduleClientProps) {
+  const searchParams = useSearchParams()
+  const initialMode = searchParams.get('mode') === 'exploration'
+  const [explorationMode, setExplorationMode] = useState(initialMode)
+
   const [slots, setSlots] = useState<Record<SlotKey, ScheduleFragrance | null>>({
     morning: null,
     midday: null,
@@ -42,16 +47,26 @@ export default function ScheduleClient({ fragrances, savedSchedules: initialSave
     const preferred = activeSlot ? (SLOTS.find(s => s.key === activeSlot)?.preferredPhases ?? []) : []
     const q = searchQuery.toLowerCase()
     return fragrances
-      .filter(f => !q || `${f.brand} ${f.name}`.toLowerCase().includes(q))
+      .filter(f => {
+        // In Exploration Mode, prioritize low-wear items (Scent Debt)
+        if (explorationMode && f.wear_count && f.wear_count > 5) return false
+        return !q || `${f.brand} ${f.name}`.toLowerCase().includes(q)
+      })
       .sort((a, b) => {
+        // Exploration Mode sorts by least worn first
+        if (explorationMode) {
+          return (a.wear_count || 0) - (b.wear_count || 0)
+        }
         const aPref = a.phase ? preferred.includes(a.phase) : false
         const bPref = b.phase ? preferred.includes(b.phase) : false
         if (aPref !== bPref) return aPref ? -1 : 1
         return a.brand.localeCompare(b.brand) || a.name.localeCompare(b.name)
       })
-  }, [fragrances, searchQuery, activeSlot])
+  }, [fragrances, searchQuery, activeSlot, explorationMode])
 
-  const hasHighAnosmiaRisk = Object.values(slots).filter(f => f?.anosmia_risk === 'High').length >= 2
+  const highAnosmiaCount = Object.values(slots).filter(f => f?.anosmia_risk === 'High').length
+  const hasHighAnosmiaRisk = highAnosmiaCount >= 2
+  const totalSprays = (Object.keys(slots) as SlotKey[]).reduce((sum, k) => slots[k] ? sum + sprays[k] : sum, 0)
   const isFilled = Object.values(slots).some(s => s !== null)
 
   const handleSelect = (fragrance: ScheduleFragrance | null) => {
@@ -110,9 +125,24 @@ export default function ScheduleClient({ fragrances, savedSchedules: initialSave
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', paddingBottom: 100 }}>
       {/* Header */}
-      <div className="px-4 pt-8 pb-4 border-b border-[var(--line)]">
-        <h1 className="text-[28px] leading-tight font-serif italic text-[var(--text)]">The Ritual</h1>
-        <p className="text-[13px] text-[var(--text-muted)]">Compose your daily fragrance sequence.</p>
+      <div className="px-4 pt-8 pb-4 border-b border-[var(--line)] flex justify-between items-end">
+        <div>
+          <h1 className="text-[28px] leading-tight font-serif italic text-[var(--text)]">The Ritual</h1>
+          <p className="text-[13px] text-[var(--text-muted)]">Compose your daily fragrance sequence.</p>
+        </div>
+        <button 
+          onClick={() => setExplorationMode(!explorationMode)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${
+            explorationMode 
+              ? 'bg-[var(--hf-gold)] border-[var(--hf-gold)] text-white shadow-lg' 
+              : 'bg-white border-[var(--line)] text-[var(--text-muted)] hover:border-[var(--hf-gold)]'
+          }`}
+        >
+          <Sparkles size={14} className={explorationMode ? 'animate-pulse' : ''} />
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            {explorationMode ? 'Exploration' : 'Standard'}
+          </span>
+        </button>
       </div>
 
       <div className="px-4 py-6 flex flex-col gap-4">
@@ -130,12 +160,21 @@ export default function ScheduleClient({ fragrances, savedSchedules: initialSave
           />
         ))}
 
-        {hasHighAnosmiaRisk && (
-          <div className="bg-[var(--surface)] border border-[var(--line)] p-4 flex gap-3 items-start animate-fade-in">
-            <ShieldAlert size={18} className="text-[var(--accent)] shrink-0 mt-0.5" />
-            <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">
-              <span className="text-[var(--text)] font-bold">Anosmia Risk:</span> Two high-ARR fragrances selected — consider spacing by 2+ hours or reducing spray count.
-            </p>
+        {/* Spray summary + anosmia pill */}
+        {isFilled && (
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] text-[var(--text-muted)] font-bold uppercase tracking-widest">
+              {totalSprays} total spray{totalSprays !== 1 ? 's' : ''}
+            </span>
+            {hasHighAnosmiaRisk && (
+              <span
+                title="Two high anosmia-risk fragrances selected — consider spacing 2+ hours apart"
+                className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border cursor-help"
+                style={{ color: 'var(--text-muted)', borderColor: 'var(--line)', background: 'var(--surface)' }}
+              >
+                ⚠ ARR
+              </span>
+            )}
           </div>
         )}
 

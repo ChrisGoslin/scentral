@@ -1,9 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Info } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import SensoryAnatomy from '@/components/ui/SensoryAnatomy'
+import SimilarFragrances from './SimilarFragrances'
 import { cookies } from 'next/headers'
 
 const PHASE_LABEL: Record<number, string> = {
@@ -121,22 +121,17 @@ export default async function FragranceDetailPage({ params }: { params: Promise<
           <SensoryAnatomy zone={f.application_zone} />
         )}
 
-        {/* Resonance Link */}
-        <div className="pt-2">
-          <Link href={`/dna-match?search=${encodeURIComponent(f.family)}`} className="inline-flex items-center gap-1.5 group">
-            <span style={{ fontSize: 13, color: 'var(--accent)', textDecoration: 'underline' }}>See similar profiles</span>
-            <span className="text-[10px] text-[var(--text-muted)] group-hover:translate-x-0.5 transition-transform">→</span>
-          </Link>
-        </div>
+        {/* Resonance — Find Similar */}
+        <SimilarFragrances fragranceId={f.id} />
 
-        {/* Anosmia warning - subtle */}
+        {/* Anosmia — inline pill only */}
         {f.anosmia_risk === 'High' && (
-          <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-[var(--r-btn)]" style={{ background: 'var(--surface-2)', border: '1px solid var(--line-light)' }}>
-            <Info size={14} style={{ color: 'var(--text-muted)' }} />
-            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              Note: High sensory risk. Recommended for open environments.
-            </p>
-          </div>
+          <span
+            title="High anosmia risk — wear in open environments and space from other high-ARR fragrances"
+            style={{ fontSize: 10, color: 'var(--text-muted)', border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 999, padding: '2px 8px', display: 'inline-block', cursor: 'help' }}
+          >
+            ⚠ High ARR
+          </span>
         )}
 
         {/* CTA */}
