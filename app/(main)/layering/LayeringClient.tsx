@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { Search, X, Check } from 'lucide-react'
+import { Search, X, Check, Sparkles, SlidersHorizontal } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import Button from '@/components/ui/Button'
@@ -12,6 +12,7 @@ import ErrorInline from '@/components/ui/ErrorInline'
 import Disclosure from '@/components/ui/Disclosure'
 import AuthSheet from '@/components/auth/AuthSheet'
 import SensoryAnatomy from '@/components/ui/SensoryAnatomy'
+import { getCurrentWeather, getUserPosition, weatherLabel, type WeatherData } from '@/utils/weather'
 
 export type LayeringFragrance = {
   id: string
@@ -83,6 +84,44 @@ function parseLasts(sillage: string): string | null {
 }
 
 const SHOW_COMMERCE_SLOT = false
+
+// ── AURA ────────────────────────────────────────────────────
+type AuraMode = 'manual' | 'aura'
+
+const AURA_USE_CASES = [
+  { key: 'work',      label: 'Work',      hint: 'Clean, moderate, professional' },
+  { key: 'date',      label: 'Date',      hint: 'Intimate, sensual, memorable' },
+  { key: 'casual',    label: 'Casual',    hint: 'Relaxed and versatile' },
+  { key: 'interview', label: 'Interview', hint: 'Authoritative, restrained' },
+  { key: 'home',      label: 'Home',      hint: 'Cozy and indulgent' },
+  { key: 'gym',       label: 'Gym',       hint: 'Light, clean, energising' },
+  { key: 'evening',   label: 'Evening',   hint: 'Bold, long-lasting sillage' },
+] as const
+
+type AuraUseCase = typeof AURA_USE_CASES[number]['key']
+
+type AuraRecommendation = {
+  id: string
+  brand: string
+  name: string
+  family: string
+  phase: 1 | 2 | 3
+  phase_label: string
+  projection: string
+  harmony_pct: number
+  layering_role: string
+  image_url: string | null
+}
+
+type AuraResult = {
+  recommendations: AuraRecommendation[]
+  aura_context: {
+    profile_description: string
+    weather_condition: string
+    base_fragrance: string
+    resonance_engine: string
+  }
+}
 
 /* ── Sub-components ─────────────────────────────────────── */
 
@@ -274,6 +313,80 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
 
   const canFormulate = slot1 !== null && slot2 !== null && slot1.id !== slot2.id
 
+  // ── AURA state ──
+  const [mode, setMode] = useState<AuraMode>('manual')
+  const [auraUseCase, setAuraUseCase] = useState<AuraUseCase>('casual')
+  const [auraBaseId, setAuraBaseId] = useState<string | null>(null)
+  const [auraResult, setAuraResult] = useState<AuraResult | null>(null)
+  const [auraLoading, setAuraLoading] = useState(false)
+  const [auraError, setAuraError] = useState<string | null>(null)
+  const [weather, setWeather] = useState<WeatherData | null>(null)
+  const [weatherLoading, setWeatherLoading] = useState(false)
+  const [auraBasePickerOpen, setAuraBasePickerOpen] = useState(false)
+  const [auraBaseQuery, setAuraBaseQuery] = useState('')
+
+  const auraBase = auraBaseId ? fragrances.find(f => f.id === auraBaseId) ?? null : null
+
+  const auraBaseList = useMemo(() => {
+    const q = auraBaseQuery.trim().toLowerCase()
+    if (!q) return fragrances
+    return fragrances.filter(f =>
+      f.name.toLowerCase().includes(q) || f.brand.toLowerCase().includes(q)
+    )
+  }, [fragrances, auraBaseQuery])
+
+  async function fetchWeather() {
+    setWeatherLoading(true)
+    try {
+      const pos = await getUserPosition()
+      if (pos) {
+        const w = await getCurrentWeather(pos)
+        setWeather(w)
+      }
+    } finally {
+      setWeatherLoading(false)
+    }
+  }
+
+  async function handleAuraSubmit() {
+    setAuraLoading(true)
+    setAuraResult(null)
+    setAuraError(null)
+    try {
+      const res = await fetch('/api/aura', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          use_case: auraUseCase,
+          base_fragrance_id: auraBaseId ?? undefined,
+          weather: weather ? { temp_c: weather.temp_c, humidity: weather.humidity } : undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'AURA synthesis failed')
+      setAuraResult(data)
+    } catch (e) {
+      setAuraError(e instanceof Error ? e.message : 'Something went wrong')
+    } finally {
+      setAuraLoading(false)
+    }
+  }
+
+  function applyAuraRecommendation(rec: AuraRecommendation) {
+    const full = fragrances.find(f => f.id === rec.id)
+    if (!full) return
+    if (auraBase) {
+      setSlot1(auraBase as unknown as LayeringFragrance)
+      setSlot2(full)
+    } else {
+      setSlot2(full)
+    }
+    setMode('manual')
+    setResult(null)
+    setError(null)
+    setSaveState('idle')
+  }
+
   /* ── Pending formulation: restore + auto-save after magic-link return ── */
   const doSave = useCallback(async (
     s1: LayeringFragrance,
@@ -443,6 +556,170 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Compose a pairing</p>
       </div>
 
+      {/* Mode toggle */}
+      <div className="px-4 pt-4 flex gap-2">
+        <button
+          onClick={() => setMode('manual')}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-[var(--r-btn)] transition-all"
+          style={{
+            background: mode === 'manual' ? 'var(--accent)' : 'var(--surface)',
+            color: mode === 'manual' ? 'white' : 'var(--text-muted)',
+            border: '1px solid var(--line)',
+            fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}
+        >
+          <SlidersHorizontal size={13} />
+          Manual
+        </button>
+        <button
+          onClick={() => setMode('aura')}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-[var(--r-btn)] transition-all"
+          style={{
+            background: mode === 'aura' ? 'var(--accent)' : 'var(--surface)',
+            color: mode === 'aura' ? 'white' : 'var(--text-muted)',
+            border: '1px solid var(--line)',
+            fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}
+        >
+          <Sparkles size={13} />
+          Ask AURA
+        </button>
+      </div>
+
+      {/* ── AURA MODE ── */}
+      {mode === 'aura' && (
+        <div className="px-4 py-6 flex flex-col gap-6">
+          <div>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+              AURA · Automated Unification & Resonance Alchemist
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              Tell AURA your context. It will synthesise the optimal layer from your collection.
+            </p>
+          </div>
+
+          {/* Use case */}
+          <div className="flex flex-col gap-2">
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Where are you going?</p>
+            <div className="flex gap-2 flex-wrap">
+              {AURA_USE_CASES.map(uc => (
+                <Chip key={uc.key} selected={auraUseCase === uc.key} onClick={() => setAuraUseCase(uc.key)}>
+                  {uc.label}
+                </Chip>
+              ))}
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--accent)', marginTop: 2 }}>
+              {AURA_USE_CASES.find(u => u.key === auraUseCase)?.hint}
+            </p>
+          </div>
+
+          {/* Base fragrance (optional) */}
+          <div className="flex flex-col gap-2">
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Base fragrance <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional — let AURA decide)</span>
+            </p>
+            <button
+              onClick={() => { setAuraBaseQuery(''); setAuraBasePickerOpen(true) }}
+              className="text-left px-4 py-3 rounded-[var(--r-card)] transition-all"
+              style={{ background: 'var(--surface)', border: `1px solid ${auraBase ? 'var(--accent)' : 'var(--line)'}` }}
+            >
+              {auraBase ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{auraBase.brand}</p>
+                    <p style={{ fontSize: 14, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{auraBase.name}</p>
+                  </div>
+                  <button onClick={e => { e.stopPropagation(); setAuraBaseId(null) }} style={{ color: 'var(--text-muted)' }}>
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Pick a base (or leave blank for AURA to choose)</p>
+              )}
+            </button>
+          </div>
+
+          {/* Weather */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live weather</p>
+              <p style={{ fontSize: 12, color: weather ? 'var(--text)' : 'var(--text-muted)', marginTop: 2 }}>
+                {weatherLoading ? 'Detecting…' : weather ? weatherLabel(weather) : 'Not detected — AURA will use defaults'}
+              </p>
+            </div>
+            <button
+              onClick={fetchWeather}
+              disabled={weatherLoading}
+              className="px-3 py-1.5 rounded-[var(--r-btn)] transition-all"
+              style={{ background: 'var(--surface)', border: '1px solid var(--line)', fontSize: 11, color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.06em' }}
+            >
+              {weather ? 'Refresh' : 'Detect'}
+            </button>
+          </div>
+
+          {/* Submit */}
+          <Button fullWidth onClick={handleAuraSubmit} disabled={auraLoading}>
+            {auraLoading ? 'AURA is synthesising…' : 'Synthesise with AURA'}
+          </Button>
+
+          {auraError && <ErrorInline message={auraError} onRetry={handleAuraSubmit} />}
+
+          {/* AURA results */}
+          {auraLoading && (
+            <div className="flex flex-col gap-3">
+              {[...Array(3)].map((_, i) => <LoadingShimmer key={i} variant="line" />)}
+            </div>
+          )}
+
+          {auraResult && !auraLoading && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  AURA Recommendations
+                </p>
+                <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}>
+                  {auraResult.aura_context.resonance_engine}
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: -8 }}>
+                {auraResult.aura_context.weather_condition} · {auraResult.aura_context.profile_description}
+              </p>
+
+              {auraResult.recommendations.map(rec => (
+                <button
+                  key={rec.id}
+                  onClick={() => applyAuraRecommendation(rec)}
+                  className="w-full text-left px-4 py-4 rounded-[var(--r-card)] transition-all hover:border-[var(--accent)] group"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{rec.brand}</p>
+                      <p style={{ fontSize: 15, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: '20px' }}>{rec.name}</p>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>{rec.family} · {rec.layering_role}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span style={{
+                        fontSize: 18, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+                        color: rec.harmony_pct >= 75 ? 'var(--accent)' : rec.harmony_pct >= 55 ? 'var(--text)' : 'var(--text-muted)',
+                      }}>
+                        {rec.harmony_pct}%
+                      </span>
+                      <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Harmony</span>
+                    </div>
+                  </div>
+                  <p className="mt-3" style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                    Tap to use this layer →
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── MANUAL MODE ── */}
+      {mode === 'manual' && (
       <div className="px-4 py-6 flex flex-col gap-6">
         {/* Picker slots */}
         <div className="flex gap-3">
@@ -469,6 +746,7 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
           </p>
         )}
       </div>
+      )}
 
       {/* Fragrance picker sheet */}
       <Sheet open={pickerFor !== null} onClose={() => { setPickerFor(null); setPickerQuery('') }}>
@@ -541,6 +819,41 @@ export default function LayeringClient({ fragrances }: { fragrances: LayeringFra
             saveState={saveState}
           />
         ) : null}
+      </Sheet>
+
+      {/* AURA base picker sheet */}
+      <Sheet open={auraBasePickerOpen} onClose={() => setAuraBasePickerOpen(false)}>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text)' }}>Pick Base</h2>
+            <button onClick={() => setAuraBasePickerOpen(false)}>
+              <X size={18} strokeWidth={1.75} style={{ color: 'var(--text-muted)' }} />
+            </button>
+          </div>
+          <div className="relative">
+            <Search size={14} strokeWidth={1.75} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              placeholder="Search…"
+              value={auraBaseQuery}
+              onChange={e => setAuraBaseQuery(e.target.value)}
+              autoFocus
+              className="w-full pl-9 pr-4 py-2.5 rounded-[var(--r-btn)] text-sm focus:outline-none"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text)' }}
+            />
+          </div>
+          <div className="flex flex-col" style={{ marginLeft: -16, marginRight: -16 }}>
+            {auraBaseList.map(f => (
+              <FragrancePickerRow
+                key={f.id}
+                f={f}
+                selected={f.id === auraBaseId}
+                disabled={false}
+                onClick={() => { setAuraBaseId(f.id); setAuraBasePickerOpen(false); setAuraBaseQuery('') }}
+              />
+            ))}
+          </div>
+        </div>
       </Sheet>
 
       {/* Auth sheet */}
